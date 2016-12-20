@@ -1,0 +1,68 @@
+- name: 本地
+  group:
+    - 
+      host: 10.211.55.6
+      user: root
+      password: 123456
+      name: 本地CentOS
+      defaultPath: /home/
+      port: 22
+      description: >
+        这是一个描述
+    - 
+      host: 114.92.128.231
+      user: sam
+      password: 123456
+      name: 联想ubuntu
+      port: 11773
+
+
+-
+  name: app
+  group:
+  -
+    host: 192.168.0.100
+    user: root
+    password: 123456
+    name: APP推送服务器-1
+    defaultPath: /var/local/
+  -
+    host: 192.168.0.101
+    user: root
+    password: 123456
+    name: APP推送服务器-2
+    defaultPath: /var/local/
+
+
+- name: v9直播室
+  code: web
+  group:
+  -
+    host: 192.168.0.100
+    user: root
+    password: 123456
+    name: web-1
+    defaultPath: /var/local/
+  -
+    host: 192.168.0.100
+    user: root
+    password: 123456
+    name: web-2
+    defaultPath: /var/local/
+  -
+    host: 192.168.0.100
+    user: root
+    password: 123456
+    name: a.com
+    defaultPath: /var/local/
+
+
+- 
+  host: 10.211.55.6
+  user: root
+  password: 123456
+  name: 本地CentOS
+  defaultPath: /home/
+  port: 22
+  description: >
+    这是一个描述
