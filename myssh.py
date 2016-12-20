@@ -550,7 +550,7 @@ if( len(sys.argv) >1 and sys.argv[1] == 'edit'):
     os.system("open -a "+editor+' ' +sys.path[0]+ '/'+yaml_path)
 
 elif( len(sys.argv) >1 and sys.argv[1] == 'self'):
-    print("open -a "+editor+' '+sys.path[0]+'/'+sys.argv[0])
+    os.system("open -a "+editor+' '+sys.path[0]+'/'+sys.argv[0])
 else:
     f = open( sys.path[0]+'/'+yaml_path,'r')
     result = list()
