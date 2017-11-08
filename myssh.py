@@ -34,6 +34,14 @@ reload(sys)
 sys.setdefaultencoding( "utf-8" )
 cmd_cache={}
 COMMANDS = ['cmd ','quit','help']
+hideip = False
+def hideip_fun(ip):
+    if hideip:
+        temp_ip = ip.split('.')
+        return temp_ip[0]+'.*.*.'+temp_ip[1]
+    else:
+        return ip
+
 def complete(text, state):
 
     for cmd in COMMANDS:
@@ -162,7 +170,6 @@ def check_up(server_num,sftp,ssh,localPath,remotePath,fileName,cmdPath):
     if( os.path.isdir( localPath ) ):
         os.chdir(os.path.split(localPath)[0])
         cmd = 'find ' + localPath + ' -type f | wc -l'
-            # cmd = 'find ' + '/Users/sam/ssh_data/' + ' -type f | wc -l'
         for line in os.popen(cmd):
             file_num = int(line) 
         if( file_num > 15):
@@ -385,15 +392,15 @@ def scp_down(sftp,remoteFile,localFile):
 def relation_add( l ,i ,sign):
     global relation 
     result_str =''
-
+    
     if( regex.match( l['name'] ) != None ):
         relation_key = regex.match( l['name'] ).group(1)
 
         if( len(sys.argv) >1 and sys.argv[1] == 'all' ):
-            result_str = sign+'\33[41m%s\33[0m:%s(%s)\n' %(i, l['name'],l['host'] )
+            result_str = sign+'\33[41m%s\33[0m:%s(%s)\n' %(i, l['name'],hideip_fun(l['host']) )
         else:
             if( not relation.has_key( relation_key  ) ):
-                result_str = sign+'\33[41m%s\33[0m:%s(%s) <<%s>>\n' %(i, l['name'],l['host'] ,relation_key )
+                result_str = sign+'\33[41m%s\33[0m:%s(%s) <<%s>>\n' %(i, l['name'],hideip_fun(l['host']) ,relation_key )
         
         if( not relation.has_key( relation_key  ) ):
 
@@ -405,7 +412,7 @@ def relation_add( l ,i ,sign):
 
         return result_str
     else:
-        return sign+'%s:%s(%s)\n' %(i, l['name'],l['host']) 
+        return sign+'%s:%s(%s)\n' %(i, l['name'],hideip_fun(l['host'])) 
 
 def is_number(s):
     try:
@@ -432,7 +439,7 @@ def ssh_cmd_func(server_num,result,p_cmd,ssh_conns,source_path,n):
     server_num = int(server_num)
     server_info = result[ server_num ]
 
-    print ('\33[34m%d:\33[31m%s(%s)\33[0m' %(server_num,server_info['name'],server_info['host']) )
+    print ('\33[34m%d:\33[31m%s(%s)\33[0m' %(server_num,server_info['name'],hideip_fun(server_info['host']) ) )
 
     cmd = p_cmd
 
@@ -491,6 +498,11 @@ for line in f_pubssh.readlines():
              local_pubssh.append(  x_ip  )
     else:
         local_pubssh.append(  new_line  )
+if len(sys.argv) > 1:
+    for operate in sys.argv[1:]:
+        if operate  == 'hideip':
+            hideip = True
+
 if( len(sys.argv) >1 and sys.argv[1] == 'edit'):
     os.system("open -a "+editor+' ' +sys.path[0]+ '/'+yaml_path)
 
@@ -546,10 +558,10 @@ else:
                         port = 22
                     print('\n\33[31m%s(%s)还没有添加公钥,输入 yes后 ctrt+c退回 \33[0m\n\n' %(
                         server_info['name'],
-                        server_info['host'] ))
+                        hideip_fun(server_info['host']) ))
                     print "ssh %s@%s  -p %s" %(
                         server_info['user'],
-                        server_info['host'],
+                        hideip_fun(server_info['host']),
                         port )
                     os.system("ssh %s@%s  -p %s" %(
                         server_info['user'],
@@ -619,7 +631,7 @@ else:
 
                     server_num = int(server_num)
                     server_info = result[ server_num ]
-                    print '\33[34m%d:\33[31m正在连接：%s(%s) \33[0m' %(server_num,server_info['name'],server_info['host'])
+                    print '\33[34m%d:\33[31m正在连接：%s(%s) \33[0m' %(server_num,server_info['name'],hideip_fun(server_info['host']))
                     if(server_info.has_key('port')):
                         port = server_info['port']
                     else:
@@ -672,7 +684,7 @@ else:
                                 p_cmd = raw_input( '\33[34m%d:\33[33m%s@%s(%s):%s#\33[0m ' %(
                                     server_num,server_info['user'],
                                     server_info['name'],
-                                    server_info['host'],
+                                    hideip_fun(server_info['host']),
                                     paths[server_num] ))
                             except KeyboardInterrupt:
                                 p_cmd ='exit'
@@ -683,7 +695,8 @@ else:
                                 server_num,
                                 server_info['user'],
                                 server_info['name'],
-                                server_info['host'],
+                                hideip_fun(server_info['host'])
+                                ,
                                 paths[server_num] ))
 
 
@@ -692,7 +705,7 @@ else:
                             server_num = int(server_num)
                             print '\33[31m正在断开连接：%s(%s) \33[0m' %(
                                 result[ server_num ]['name'],
-                                result[ server_num ]['host'] )
+                                hideip_fun(result[ server_num ]['host']) )
 
                             ssh_conns[ server_num ].close()
                             scp_conns[ server_num ].close()
@@ -742,7 +755,7 @@ else:
                             server_info = result[ server_num ]
                             print( '\33[34m%d:\33[31m%s(%s)\33[0m' %(
                                 server_num,server_info['name'],
-                                server_info['host'] ))
+                                hideip_fun(server_info['host']) ))
 
                             add_file[ server_num ] =list()
                             is_sync_file= False
@@ -786,7 +799,7 @@ else:
                             print( '\33[34m%d:\33[31m%s@%s(%s)\33[0m 下载中' %(
                                 master_server,server_info['user'],
                                 server_info['name'],
-                                server_info['host']))
+                                hideip_fun(server_info['host']) ))
 
                             for file_name in files_list:
                                 os.system('mkdir -p "'+ source_path+result[master_server]['name']+'-SYNC/' +file_name[0:file_name.rindex('/')] + '/"')
@@ -802,7 +815,7 @@ else:
                                 print( '\33[34m%d:\33[31m%s@%s(%s)\33[0m 上传中' %(
                                     server_num,server_info['user'],
                                     server_info['name'],
-                                    server_info['host']))
+                                    hideip_fun(server_info['host']) ))
 
                                 for file_name in add_file[server_num]:
                                     if(file_name.count('/') > 1):
@@ -849,7 +862,7 @@ else:
                                         int( server_num_arr.group(1) ),
                                         server_info['user'],
                                         server_info['name'],
-                                        server_info['host'],
+                                        hideip_fun(server_info['host']),
                                         paths[ int( server_num_arr.group(1) ) ],
                                         p_cmd ))
                                 else:
@@ -864,14 +877,14 @@ else:
                                             print( '\33[34m%d:\33[33m%s@%s(%s):%s#\33[0m%s' 
                                                 %( server_num,server_info['user'],
                                                     server_info['name'],
-                                                    server_info['host'],
+                                                    hideip_fun(server_info['host']),
                                                     paths[server_num],
                                                     p_cmd )  )
                                         else:
                                             print( '\33[34m%d:\33[33m%s@%s(%s):%s#\33[0m' 
                                                 %( server_num,server_info['user'],
                                                     server_info['name'],
-                                                    server_info['host'],
+                                                    hideip_fun(server_info['host']),
                                                     paths[server_num] )  )
                                 
                                 if( 'notpath' == script_err ):
@@ -970,7 +983,7 @@ else:
 
                 server_info = result[ server_num ]
 
-                print u'\n\33[31m正在连接：%s(%s) \33[0m' %( server_info['name'],server_info['host'] ) 
+                print u'\n\33[31m正在连接：%s(%s) \33[0m' %( server_info['name'],hideip_fun(server_info['host']) ) 
                 
                 if( server_info.has_key('description') ):
                     print( '\33[32m' + server_info['description'].replace('#',' \33[35m#').replace('\\n ','\33[32m\n') +'\33[0m\n' )
