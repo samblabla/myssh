@@ -13,8 +13,11 @@ import re
 from stat import S_ISDIR
 
 import tab
+import platform
 
 import config
+
+symtem_name = platform.system()
 
 
 servers=list();
@@ -476,7 +479,10 @@ def ssh_cmd_func(server_num,result,p_cmd,ssh_conns,source_path,n):
             paths[server_num] + '/' + cmds[1],
             source_path+server_info['name']+'/' ,
             fileName[ len(fileName)-1],paths[server_num] )
-        os.system('open "'+source_path+server_info['name']+'/"')
+        if symtem_name == 'Darwin':
+            os.system('open "'+source_path+server_info['name']+'/"')
+        else:
+            print('文件已下载到 "'+source_path+server_info['name']+'/"')
 
     else:
         cmd = 'cd '+paths[server_num]+' && '+ cmd
@@ -504,10 +510,16 @@ if len(sys.argv) > 1:
             hideip = True
 
 if( len(sys.argv) >1 and sys.argv[1] == 'edit'):
-    os.system("open -a "+editor+' ' +sys.path[0]+ '/'+yaml_path)
+    if symtem_name == 'Darwin':
+        os.system('open -a '+editor+' ' +sys.path[0]+ '/'+yaml_path)
+    else:
+        os.system('vim '+sys.path[0]+ '/'+yaml_path)
 
 elif( len(sys.argv) >1 and sys.argv[1] == 'self'):
-    os.system("open -a "+editor+' '+sys.path[0]+'/'+ ( sys.argv[0].split("/")[-1]) )
+    if symtem_name == 'Darwin':
+        os.system('open -a '+editor+' '+sys.path[0]+'/'+ ( sys.argv[0].split("/")[-1]) )
+    else:
+        os.system('vim '+sys.path[0]+'/'+ ( sys.argv[0].split("/")[-1]) )
 else:
     f = open( sys.path[0]+'/'+yaml_path,'r')
     result = list()
