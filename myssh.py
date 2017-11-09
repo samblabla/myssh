@@ -15,12 +15,14 @@ from stat import S_ISDIR
 import tab
 import platform
 
+import threading
+
 import config
 
 symtem_name = platform.system()
 
 
-servers=list();
+servers=list()
 
 sshpass = config.sshpass
 source_path = config.source_path
@@ -360,6 +362,16 @@ def scp_downs(sftp,remotePath,localPath):
         except Exception,e:
             print( e )
 
+#ssh心跳定时执行是否关闭
+heartbeat_ssh_close = list()
+def heartbeat_ssh(ssh_conns,close_i):
+    while 1:
+        if heartbeat_ssh_close[close_i]:
+            break
+        for i in ssh_conns:
+            ssh_conns[i].exec_command('pwd')
+        time.sleep(30)
+
 def show_remote_file(sftp,remotePath,server_num):
     file_info ={}
     file_nums =0 
@@ -679,6 +691,12 @@ else:
                     print( '\33[32m' + server_info['description'].replace('#',' \33[35m#').replace('\\n ','\33[32m\n') +'\33[0m\n' )
 
                 readline.set_completer(complete_path)
+                
+                heartbeat_ssh_close.append( False )
+                
+                thread_ssh = threading.Thread(target=heartbeat_ssh,args=(ssh_conns,len(heartbeat_ssh_close)-1))
+                thread_ssh.setDaemon(True)
+                thread_ssh.start()
                 while(1):
                     cmds={}
 
@@ -713,6 +731,7 @@ else:
 
 
                     if( p_cmd == 'exit'):
+                        heartbeat_ssh_close[len(heartbeat_ssh_close)-1] = True
                         for server_num in server_list:
                             server_num = int(server_num)
                             print '\33[31m正在断开连接：%s(%s) \33[0m' %(
