@@ -372,26 +372,49 @@ def heartbeat_ssh(ssh_conns,close_i):
             ssh_conns[i].exec_command('pwd')
         time.sleep(30)
 
-def show_remote_file(sftp,remotePath,server_num):
-    file_info ={}
-    file_nums =0 
-    sftp.listdir_attr(remotePath)
 
-    parent=os.path.split(remotePath)[1]
+def show_remote_file(ssh_conn,remotePath,server_num):
+    getdir_cmd = '''
+function getdir(){
+    for t_element in `ls $1 --full-time|awk '{if(NR!=1) print}'|awk '{print $9"❂"$6"."$7}'`
+    do 
+        local element=$t_element
+            OLD_IFS="$IFS" 
+        IFS="❂" #shell分隔符只能用一位的
+        local arr=($element) 
+            IFS="$OLD_IFS"
+        dir_or_file=$1"/"${arr[0]}
+        if [ -d $dir_or_file ]
+            then 
+                getdir $dir_or_file
+        else
+            echo $dir_or_file' '${arr[1]}
+        fi  
+    done
+}
+getdir .
+'''
+    temp_file_info = ssh_cmd(ssh_conn, 'cd '+remotePath+' &&'+getdir_cmd)
+    file_info = {}
+    if len(temp_file_info)>0:
+        temp_folder= remotePath.split('/')
+        folder_name = temp_folder[len(temp_folder)-1]
+        for i in temp_file_info.split('\n'):
+            temp_i = i.split(' ')
+            temp_time = temp_i[1].split('.')
+            file_path =u''+folder_name+ temp_i[0][1:]
+            file_info[ file_path ] = strToTimestamp(temp_time[0]+' '+temp_time[1])
 
-    sftp.chdir(os.path.split(remotePath)[0])
- 
-    for walker in sftp_walk_time(sftp,parent):  
-        for file in walker[2]:
-            file_nums += 1
-            msg = '%d:正在扫描文件 %d' %(server_num,file_nums)
-            sys.stdout.write(msg + ('\b')  * len(msg) )
-            sys.stdout.flush()
-
-            file_info[os.path.join(walker[0],file)] = walker[2][file]
     print('%d:扫描完成' %server_num)
 
     return file_info
+
+def strToTimestamp(dt):
+    #转换成时间数组
+    timeArray = time.strptime(dt, "%Y-%m-%d %H:%M:%S")
+    #转换成时间戳
+    timestamp = time.mktime(timeArray)
+    return timestamp
 
 def scp_down(sftp,remoteFile,localFile):
 
@@ -770,18 +793,16 @@ else:
                             client_server.extend( server_list )
                             client_server.remove( master_server )
 
-
                         master_file = show_remote_file(
-                            scp_conns[ master_server ],
+                            ssh_conns[ master_server ],
                             paths[ master_server ] , master_server)
-                         
                         master_remote_path = paths[master_server]
 
                         is_all_sync_file = False
                         for server_num in client_server:
                             server_num = int(server_num)
                             client_file[server_num] = show_remote_file(
-                                scp_conns[ server_num ],
+                                ssh_conns[ server_num ],
                                 paths[ server_num ] , server_num)
                             server_info = result[ server_num ]
                             print( '\33[34m%d:\33[31m%s(%s)\33[0m' %(
