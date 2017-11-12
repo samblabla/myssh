@@ -129,7 +129,10 @@ def scp_upload(server_num,sftp,localFile,remoteFile):
         result=sftp.put(localFile,remoteFile,printTotals)
         print ''
     except Exception, e:
+        if str(e) == 'division by zero':
+            return
         print '发生错误,尝试重连...'
+
         if(servers[server_num].has_key('port')):
             port = servers[server_num]['port']
         else:
@@ -423,6 +426,8 @@ def scp_down(sftp,remoteFile,localFile):
         result=sftp.get(remoteFile,localFile, printTotals )
         print('')
     except Exception, e:
+        if str(e) == 'division by zero':
+            return
         print e
         print '发生错误'
 
