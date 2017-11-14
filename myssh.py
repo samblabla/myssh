@@ -702,7 +702,7 @@ else:
                 pass
             if(server =='help'):
                 continue
-            elif(server == 'quit'):
+            elif(server == 'quit' or server == 'exit' ):
                 exit()
             elif(server.find('cmd ') != -1):
                 
@@ -807,6 +807,27 @@ else:
                             print '\33[34m%d:\33[31m正在重连：%s(%s) \33[0m' %(server_num,server_info['name'],hideip_fun(server_info['host']))
                             create_ssh_conn(server_num)
                             create_scp_conn(server_num)
+                        continue
+                    if(p_cmd == 'detail'):
+                        for server_num in server_list:
+                            print ('\33[34m%d:\33[31m%s(%s)\33[0m' %(server_num,server_info['name'],hideip_fun(server_info['host']) ) )
+                            
+                            cmd ='''
+date -R;\
+echo 内网IP:$(ifconfig |head -n 2|grep "inet addr"|cut -b 21-80);\
+echo 系统:'\33[34m'$(head -n 1 /etc/issue) $(getconf LONG_BIT)位'\33[0m';\
+echo cpu:$(cat /proc/cpuinfo |grep "model name"| wc -l)核;\
+cat /proc/meminfo |grep 'MemTotal';\
+echo cpu使用情况:;\
+top -b -n 1 -1|grep Cpu;\
+echo 内存使用情况:;\
+free -m;\
+echo 负载:;\
+uptime;\
+echo 磁盘使用:;\
+df -hl;\
+'''
+                            print ssh_cmd(server_num,cmd)
                         continue
                     if( p_cmd ==''):
                         continue
