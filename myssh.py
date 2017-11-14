@@ -93,20 +93,28 @@ def ssh_cmd_login(host,user,pwd,port):
     ssh.connect(host,port=port,username=user,password=pwd,compress=True)
     return ssh
 
-def ssh_cmd(ssh,cmd):
-    stdin, stdout, stderr = ssh.exec_command(cmd)
+def ssh_cmd(server_num,cmd):
+    global ssh_conns
+
+    ssh = ssh_conns[server_num]
+    try:
+        stdin, stdout, stderr = ssh.exec_command(cmd)
+    except Exception, e:
+        print '发生错误,尝试重连...'
+        create_ssh_conn(server_num)
+
+        return ssh_cmd(server_num,cmd)
     return stdout.read()[0:-1]
 
-def ssh_cmd_cache(ssh,cmd):
+def ssh_cmd_cache(server_num,cmd):
     global cmd_cache
     if( not cmd_cache.has_key(cmd) ):
-        stdin, stdout, stderr = ssh.exec_command(cmd)
-        cmd_cache = {cmd: stdout.read()[0:-1]}
+        result = ssh_cmd(server_num,cmd)
+        cmd_cache = {cmd: result}
     return cmd_cache[ cmd ]
 
-def ssh_cd(ssh,cmd):
-    stdin, stdout, stderr = ssh.exec_command(cmd+' && pwd')
-    result = stdout.read()[0:-1]
+def ssh_cd(server_num,cmd):
+    result = ssh_cmd(server_num,cmd+' && pwd')
     if( result == ''):
         print('\n\33[31merror:目录不存在!!\33[0m')
         return False
@@ -121,9 +129,9 @@ def scp_login(host,user,pwd,port):
 
     return sftp
 
-def scp_upload(server_num,sftp,localFile,remoteFile):
-    global servers
-    
+def scp_upload(server_num,localFile,remoteFile):
+    global scp_conns
+    sftp = scp_conns[ server_num ]
     try:
 
         result=sftp.put(localFile,remoteFile,printTotals)
@@ -131,20 +139,12 @@ def scp_upload(server_num,sftp,localFile,remoteFile):
     except Exception, e:
         if str(e) == 'division by zero':
             return
+        # print e
         print '发生错误,尝试重连...'
 
-        if(servers[server_num].has_key('port')):
-            port = servers[server_num]['port']
-        else:
-            port = 22
-        global scp_conns
-        scp_conns[ server_num ] = scp_login(
-                servers[server_num]['host'],
-                servers[server_num]['user'],
-                servers[server_num]['password'],
-                port
-                )
-        scp_upload(server_num,scp_conns[ server_num ],localFile,remoteFile)
+        create_scp_conn(server_num)
+
+        scp_upload(server_num,localFile,remoteFile)
 
 def printTotals(transferred, toBeTransferred):
     
@@ -174,6 +174,35 @@ def group(n, sep = ','):
     else:
         return retval
 
+def create_ssh_conn(server_num):
+    global servers
+    global ssh_conns
+    if(servers[server_num].has_key('port')):
+        port = servers[server_num]['port']
+    else:
+        port = 22
+    ssh_conns[ server_num ] = ssh_cmd_login(
+        server_info['host'],
+        server_info['user'],
+        server_info['password'],
+        port
+        )
+def create_scp_conn(server_num):
+    global servers
+    global ssh_conns
+    if(servers[server_num].has_key('port')):
+        port = servers[server_num]['port']
+    else:
+        port = 22
+        scp_conns[ server_num ] = scp_login(
+            server_info['host'],
+            server_info['user'],
+            server_info['password'],
+            port
+            )
+            
+
+
 def check_up(server_num,sftp,ssh,localPath,remotePath,fileName,cmdPath):
     if( os.path.isdir( localPath ) ):
         os.chdir(os.path.split(localPath)[0])
@@ -196,7 +225,7 @@ def check_up(server_num,sftp,ssh,localPath,remotePath,fileName,cmdPath):
                     cmd = 'tar -czf %s_%s.tar %s' %( fileName,new_time , fileName)
                     os.system( cmd )    
                     print '打包完成,开始上传 %s_%s.tar '  %(fileName,new_time )
-                scp_upload(server_num,sftp,localPath+'_'+new_time+'.tar',remotePath + fileName+'_'+new_time+'.tar')
+                scp_upload(server_num,localPath+'_'+new_time+'.tar',remotePath + fileName+'_'+new_time+'.tar')
 
                 # input_result2 = raw_input( '上传完成,是否解压(y/n):' )
                 input_result2 = 'y'
@@ -206,8 +235,8 @@ def check_up(server_num,sftp,ssh,localPath,remotePath,fileName,cmdPath):
                     cmd = 'tar -xvf %s_%s.tar'  %( fileName,new_time) 
                     print( cmd )
                     cmd = 'cd '+cmdPath+' && '+ cmd
-                    stdin, stdout, stderr = ssh.exec_command(cmd)
-                    result = stdout.read()[0:-1]
+
+                    result = ssh_cmd(server_num,cmd)
 
                     if( stdout.read()[0:-1] == '' ):
                         print( result )
@@ -215,7 +244,8 @@ def check_up(server_num,sftp,ssh,localPath,remotePath,fileName,cmdPath):
                     cmd= 'rm %s_%s.tar'     %( fileName,new_time)
                     print( cmd )
                     cmd = 'cd '+cmdPath+' && '+ cmd
-                    stdin, stdout, stderr = ssh.exec_command(cmd)
+                    # stdin, stdout, stderr = ssh.exec_command(cmd)
+                    result = ssh_cmd(server_num,cmd)
                 else:
                     return
             else:
@@ -224,7 +254,7 @@ def check_up(server_num,sftp,ssh,localPath,remotePath,fileName,cmdPath):
             up_files(sftp,localPath,remotePath )
     
     else:
-        scp_upload(server_num,sftp,localPath,remotePath + fileName)
+        scp_upload(server_num,localPath,remotePath + fileName)
 
 
 def up_files( sftp,localPath,remotePath ):
@@ -296,19 +326,22 @@ def sftp_walk_time(sftp,remotePath):
         print e
         # print '发生错误'
     
-def check_down( sftp,ssh,remotePath,localPath,fileName ,cmdPath):#检查下载
+def check_down( server_num,remotePath,localPath,fileName ,cmdPath):#检查下载
+    global scp_conns
+    global ssh_conns
+
+    sftp = scp_conns[ server_num ]
 
     try:
         sftp.listdir_attr(remotePath)
         cmd = 'find ' + remotePath + ' -type f | wc -l'
-        stdin, stdout, stderr = ssh.exec_command(cmd)
-        file_num = int(stdout.read()[0:-1] )
+        file_num = ssh_cmd(server_num,cmd)
         if( file_num >15 ):
             global new_time
             new_time = str( new_time )
             input_result = raw_input( '下载文件数量为:%d,建议压缩后再下载(输入y继续下载,输入t打包下载,输入n退出):' %file_num )
             if(input_result == 'y'):
-                scp_downs(sftp,remotePath,localPath)
+                scp_downs(server_num,remotePath,localPath)
             elif(input_result == 't'):
                 if fileName == '':
                     temp=remotePath.split('/')
@@ -316,12 +349,11 @@ def check_down( sftp,ssh,remotePath,localPath,fileName ,cmdPath):#检查下载
                 cmd = 'tar -czf %s_%s.tar %s' %( fileName, new_time , fileName)
                 print( cmd )
                 cmd = 'cd '+cmdPath+' && '+ cmd
+                cmd_result = ssh_cmd(server_num,cmd)
 
-                stdin, stdout, stderr = ssh.exec_command(cmd)
-
-                if( stdout.read()[0:-1] == '' ):
+                if( cmd_result == '' ):
                     print( '打包完成,开始下载 %s_%s.tar '  %(fileName ,new_time) )
-                    scp_down(sftp,cmdPath + '/'+ fileName + '_'+new_time+ '.tar',localPath+fileName+'_'+new_time+'.tar')
+                    scp_down(server_num,cmdPath + '/'+ fileName + '_'+new_time+ '.tar',localPath+fileName+'_'+new_time+'.tar')
 
                 else:
                     print '操作失败'
@@ -330,53 +362,63 @@ def check_down( sftp,ssh,remotePath,localPath,fileName ,cmdPath):#检查下载
             else:
                 return
         else:
-            scp_downs(sftp,remotePath,localPath)
+            scp_downs(server_num,remotePath,localPath)
 
     except Exception,e:
-        scp_down(sftp,remotePath,localPath+fileName)
+        scp_down(server_num,remotePath,localPath+fileName)
 
-def scp_downs(sftp,remotePath,localPath):
-        #  recursively download a full directory  
-        #  Harder than it sounded at first, since paramiko won't walk  
-        #  
-        # For the record, something like this would gennerally be faster:  
-        # ssh user@host 'tar -cz /source/folder' |  
+def scp_downs(server_num,remotePath,localPath):
+    global scp_conns
+    sftp = scp_conns[ server_num ]
+    
+    #  recursively download a full directory  
+    #  Harder than it sounded at first, since paramiko won't walk  
+    #  
+    # For the record, something like this would gennerally be faster:  
+    # ssh user@host 'tar -cz /source/folder' |  
 
-        try:
-            print('下载 %s 中 ...' %remotePath)
-            sftp.listdir_attr(remotePath)
+    try:
+        print('下载 %s 中 ...' %remotePath)
+        sftp.listdir_attr(remotePath)
 
-            parent=os.path.split(remotePath)[1]
+        parent=os.path.split(remotePath)[1]
 
-            sftp.chdir(os.path.split(remotePath)[0])
+        sftp.chdir(os.path.split(remotePath)[0])
+        try:  
+            os.mkdir(localPath)  
+        except:
+            pass  
+        for walker in sftp_walk(sftp,parent):  
             try:  
-                os.mkdir(localPath)  
+                os.mkdir(os.path.join(localPath,walker[0]))  
             except:
                 pass  
-            for walker in sftp_walk(sftp,parent):  
-                try:  
-                    os.mkdir(os.path.join(localPath,walker[0]))  
-                except:
-                    pass  
-                for file in walker[2]:
-                    print( ' '+os.path.join(walker[0],file) )
-                    sftp.get(os.path.join(walker[0],file),os.path.join(localPath,walker[0],file), printTotals)
-                    print('')
-        except Exception,e:
-            print( e )
+            for file in walker[2]:
+                print( ' '+os.path.join(walker[0],file) )
+                sftp.get(os.path.join(walker[0],file),os.path.join(localPath,walker[0],file), printTotals)
+                print('')
+    except Exception,e:
+        if str(e) == 'division by zero':
+            return
+        # print e
+        print '发生错误,尝试重连...'
+
+        create_scp_conn(server_num)
+
+        scp_downs(server_num,remotePath,localPath)
 
 #ssh心跳定时执行是否关闭
-heartbeat_ssh_close = list()
-def heartbeat_ssh(ssh_conns,close_i):
+# heartbeat_ssh_close = list()
+''' def heartbeat_ssh(ssh_conns,close_i):
     while 1:
         if heartbeat_ssh_close[close_i]:
             break
         for i in ssh_conns:
             ssh_conns[i].exec_command('pwd')
         time.sleep(30)
+ '''
 
-
-def show_remote_file(ssh_conn,remotePath,server_num):
+def show_remote_file(server_num,remotePath):
     getdir_cmd = '''
 function getdir(){
     for t_element in `ls $1 --full-time|awk '{if(NR!=1) print}'|awk '{print $9"❂"$6"."$7}'`
@@ -397,7 +439,7 @@ function getdir(){
 }
 getdir .
 '''
-    temp_file_info = ssh_cmd(ssh_conn, 'cd '+remotePath+' &&'+getdir_cmd)
+    temp_file_info = ssh_cmd(server_num, 'cd '+remotePath+' &&'+getdir_cmd)
     file_info = {}
     if len(temp_file_info)>0:
         temp_folder= remotePath.split('/')
@@ -419,8 +461,9 @@ def strToTimestamp(dt):
     timestamp = time.mktime(timeArray)
     return timestamp
 
-def scp_down(sftp,remoteFile,localFile):
-
+def scp_down(server_num,remoteFile,localFile):
+    global scp_conns
+    sftp = scp_conns[ server_num ]
     # Copy a remote file (remotePath) from the SFTP server to the local host
     try:
         result=sftp.get(remoteFile,localFile, printTotals )
@@ -428,8 +471,12 @@ def scp_down(sftp,remoteFile,localFile):
     except Exception, e:
         if str(e) == 'division by zero':
             return
-        print e
-        print '发生错误'
+        # print e
+        print '发生错误,尝试重连...'
+
+        create_scp_conn(server_num)
+        
+        scp_down(server_num,remoteFile,localFile)
 
 
 def relation_add( l ,i ,sign):
@@ -489,7 +536,7 @@ def ssh_cmd_func(server_num,result,p_cmd,ssh_conns,source_path,n):
     if( p_cmd[0:2] == 'cd'):
         cmd = 'cd '+paths[server_num]+' && '+ cmd
         # print(cmd)
-        temp_path = ssh_cd(ssh_conns[ server_num ],cmd )
+        temp_path = ssh_cd(server_num,cmd )
         if( temp_path ):
             paths[server_num] = temp_path 
         else:
@@ -514,8 +561,7 @@ def ssh_cmd_func(server_num,result,p_cmd,ssh_conns,source_path,n):
         os.system( 'mkdir -p "'+source_path+server_info['name']+'/"' )
 
         check_down(
-            scp_conns[ server_num ],
-            ssh_conns[ server_num ],
+            server_num,
             paths[server_num] + '/' + cmds[1],
             source_path+server_info['name']+'/' ,
             fileName[ len(fileName)-1],paths[server_num] )
@@ -526,7 +572,7 @@ def ssh_cmd_func(server_num,result,p_cmd,ssh_conns,source_path,n):
 
     else:
         cmd = 'cd '+paths[server_num]+' && '+ cmd
-        cmds[ n ] = ssh_cmd(ssh_conns[ server_num ], cmd)
+        cmds[ n ] = ssh_cmd(server_num, cmd)
         print( cmds[ n ] )
 
 
@@ -684,35 +730,22 @@ else:
                     server_num = int(server_num)
                     server_info = result[ server_num ]
                     print '\33[34m%d:\33[31m正在连接：%s(%s) \33[0m' %(server_num,server_info['name'],hideip_fun(server_info['host']))
-                    if(server_info.has_key('port')):
-                        port = server_info['port']
-                    else:
-                        port = 22
-                    ssh_conns[ server_num ] = ssh_cmd_login(
-                        server_info['host'],
-                        server_info['user'],
-                        server_info['password'],
-                        port
-                        )
-                    
-                    scp_conns[ server_num ] = scp_login(
-                        server_info['host'],
-                        server_info['user'],
-                        server_info['password'],
-                        port
-                        )
+                    create_ssh_conn(server_num)
+                    create_scp_conn(server_num)
+
+                 
                     
                     if( server_info.has_key('defaultPath') ):
-                        temp_path =ssh_cd( ssh_conns[ server_num ] ,'cd ' + server_info['defaultPath'])
+                        temp_path = ssh_cd(server_num ,'cd ' + server_info['defaultPath'])
                         if( temp_path ):
                             paths[server_num] = temp_path
                         else:
                             paths[server_num] = ssh_cd(
-                                ssh_conns[ server_num ],
+                                server_num,
                                 'cd ./' )
                     else:
                         paths[server_num] = ssh_cd(
-                            ssh_conns[ server_num ],
+                            server_num,
                             'cd ./' )
 
                 if( server_info.has_key('description') ):
@@ -720,11 +753,11 @@ else:
 
                 readline.set_completer(complete_path)
                 
-                heartbeat_ssh_close.append( False )
+                # heartbeat_ssh_close.append( False )
                 
-                thread_ssh = threading.Thread(target=heartbeat_ssh,args=(ssh_conns,len(heartbeat_ssh_close)-1))
-                thread_ssh.setDaemon(True)
-                thread_ssh.start()
+                # thread_ssh = threading.Thread(target=heartbeat_ssh,args=(ssh_conns,len(heartbeat_ssh_close)-1))
+                # thread_ssh.setDaemon(True)
+                # thread_ssh.start()
                 while(1):
                     cmds={}
 
@@ -735,7 +768,7 @@ else:
                         server_info = result[ server_num ]
 
                         if(server_len == i):
-                            ssh_complete = ssh_conns[ server_num ]
+                            ssh_complete = server_num
                             path_complete = paths[ server_num ]
                             
                             try:
@@ -759,7 +792,7 @@ else:
 
 
                     if( p_cmd == 'exit'):
-                        heartbeat_ssh_close[len(heartbeat_ssh_close)-1] = True
+                        # heartbeat_ssh_close[len(heartbeat_ssh_close)-1] = True
                         for server_num in server_list:
                             server_num = int(server_num)
                             print '\33[31m正在断开连接：%s(%s) \33[0m' %(
@@ -769,6 +802,12 @@ else:
                             ssh_conns[ server_num ].close()
                             scp_conns[ server_num ].close()
                         break
+                    if(p_cmd == 'f5'):
+                        for server_num in server_list:  
+                            print '\33[34m%d:\33[31m正在重连：%s(%s) \33[0m' %(server_num,server_info['name'],hideip_fun(server_info['host']))
+                            create_ssh_conn(server_num)
+                            create_scp_conn(server_num)
+                        continue
                     if( p_cmd ==''):
                         continue
 
@@ -799,16 +838,16 @@ else:
                             client_server.remove( master_server )
 
                         master_file = show_remote_file(
-                            ssh_conns[ master_server ],
-                            paths[ master_server ] , master_server)
+                            master_server,
+                            paths[ master_server ])
                         master_remote_path = paths[master_server]
 
                         is_all_sync_file = False
                         for server_num in client_server:
                             server_num = int(server_num)
                             client_file[server_num] = show_remote_file(
-                                ssh_conns[ server_num ],
-                                paths[ server_num ] , server_num)
+                                server_num,
+                                paths[ server_num ] )
                             server_info = result[ server_num ]
                             print( '\33[34m%d:\33[31m%s(%s)\33[0m' %(
                                 server_num,server_info['name'],
@@ -863,7 +902,7 @@ else:
                                 
                                 print(' ' + file_name[file_name.index('/')+1:])
                                 scp_down(
-                                    scp_conns[ master_server ],
+                                    master_server,
                                     master_remote_path +'/'+file_name[file_name.index('/')+1:],
                                     source_path+result[master_server]['name']+'-SYNC/'+file_name )
 
@@ -878,14 +917,13 @@ else:
                                     if(file_name.count('/') > 1):
                                         try:
                                             cmd = 'mkdir -p "' + client_remote_path + file_name[ file_name.index('/'):file_name.rindex('/')] + '/"'
-                                            ssh_cmd(ssh_conns[ server_num ], cmd)
+                                            ssh_cmd(server_num, cmd)
 
                                         except Exception,e:
                                             pass
                                     print(' ' + file_name[file_name.index('/')+1:])
                                     scp_upload(
                                         server_num,
-                                        scp_conns[ server_num ],
                                         source_path+result[master_server]['name']+'-SYNC/'+file_name,
                                         client_remote_path +'/'+file_name[file_name.index('/')+1:] )
 
@@ -929,7 +967,7 @@ else:
                                         server_info = result[ server_num ]
 
                                         if(server_len == i):
-                                            ssh_complete = ssh_conns[ server_num ]
+                                            ssh_complete = server_num
                                             path_complete = paths[ server_num ]
                                             print( '\33[34m%d:\33[33m%s@%s(%s):%s#\33[0m%s' 
                                                 %( server_num,server_info['user'],
