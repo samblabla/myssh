@@ -182,9 +182,9 @@ def create_ssh_conn(server_num):
     else:
         port = 22
     ssh_conns[ server_num ] = ssh_cmd_login(
-        server_info['host'],
-        server_info['user'],
-        server_info['password'],
+        servers[server_num]['host'],
+        servers[server_num]['user'],
+        servers[server_num]['password'],
         port
         )
 def create_scp_conn(server_num):
@@ -194,16 +194,16 @@ def create_scp_conn(server_num):
         port = servers[server_num]['port']
     else:
         port = 22
-        scp_conns[ server_num ] = scp_login(
-            server_info['host'],
-            server_info['user'],
-            server_info['password'],
-            port
-            )
-            
+    scp_conns[ server_num ] = scp_login(
+        servers[server_num]['host'],
+        servers[server_num]['user'],
+        servers[server_num]['password'],
+        port
+        )
+        
 
 
-def check_up(server_num,sftp,ssh,localPath,remotePath,fileName,cmdPath):
+def check_up(server_num,sftp,localPath,remotePath,fileName,cmdPath):
     if( os.path.isdir( localPath ) ):
         os.chdir(os.path.split(localPath)[0])
         cmd = 'find ' + localPath + ' -type f | wc -l'
@@ -328,8 +328,6 @@ def sftp_walk_time(sftp,remotePath):
     
 def check_down( server_num,remotePath,localPath,fileName ,cmdPath):#检查下载
     global scp_conns
-    global ssh_conns
-
     sftp = scp_conns[ server_num ]
 
     try:
@@ -408,15 +406,59 @@ def scp_downs(server_num,remotePath,localPath):
         scp_downs(server_num,remotePath,localPath)
 
 #ssh心跳定时执行是否关闭
-# heartbeat_ssh_close = list()
-''' def heartbeat_ssh(ssh_conns,close_i):
+heartbeat_paramiko_close = list()
+def heartbeat_ssh(ssh_conns,close_i):
     while 1:
-        if heartbeat_ssh_close[close_i]:
+        if heartbeat_paramiko_close[close_i]:
             break
-        for i in ssh_conns:
-            ssh_conns[i].exec_command('pwd')
+        try:
+            for i in ssh_conns:
+                ssh_conns[i].exec_command('pwd')
+        except Exception,e:
+            print '\n'
+            for i in ssh_conns:
+                if heartbeat_paramiko_close[close_i]:
+                    break
+                print '重连ssh ',i
+                create_ssh_conn(i)
+            for i in ssh_conns:
+                if heartbeat_paramiko_close[close_i]:
+                    break
+                print( '\33[34m%d:\33[33m%s@%s(%s):%s#\33[0m ' %(
+                    i,
+                    servers[i]['user'],
+                    servers[i]['name'],
+                    hideip_fun(servers[i]['host'])
+                    ,
+                    paths[server_num] ))
         time.sleep(30)
- '''
+
+def heartbeat_scp(scp_conns,close_i):
+    while 1:
+        if heartbeat_paramiko_close[close_i]:
+            break
+        try:
+            for i in scp_conns:
+                scp_conns[i].listdir_attr('/')
+        except Exception,e:
+            print '\n'
+            for i in scp_conns:
+                if heartbeat_paramiko_close[close_i]:
+                    break
+                print '重连scp ',i
+                create_scp_conn(i)
+            for i in scp_conns:
+                if heartbeat_paramiko_close[close_i]:
+                    break
+                print( '\33[34m%d:\33[33m%s@%s(%s):%s#\33[0m ' %(
+                    i,
+                    servers[i]['user'],
+                    servers[i]['name'],
+                    hideip_fun(servers[i]['host'])
+                    ,
+                    paths[server_num] ))
+        time.sleep(30)
+
 
 def show_remote_file(server_num,remotePath):
     getdir_cmd = '''
@@ -547,7 +589,7 @@ def ssh_cmd_func(server_num,result,p_cmd,ssh_conns,source_path,n):
         fileName = cmds[1].split('/')
         fileName[ len(fileName)-1]
 
-        check_up(server_num, scp_conns[ server_num ],ssh_conns[ server_num ],source_path+'up/'+cmds[1],paths[server_num]+'/', fileName[ len(fileName)-1] ,paths[server_num])
+        check_up(server_num, scp_conns[ server_num ],source_path+'up/'+cmds[1],paths[server_num]+'/', fileName[ len(fileName)-1] ,paths[server_num])
     # elif(p_cmd[0:5] =='downs'):
     #     cmds = cmd.split(' ')
     #     fileName = cmds[1].split('/')
@@ -726,7 +768,6 @@ else:
                 server_len =len( server_list )
 
                 for server_num in server_list:        
-
                     server_num = int(server_num)
                     server_info = result[ server_num ]
                     print '\33[34m%d:\33[31m正在连接：%s(%s) \33[0m' %(server_num,server_info['name'],hideip_fun(server_info['host']))
@@ -753,11 +794,19 @@ else:
 
                 readline.set_completer(complete_path)
                 
-                # heartbeat_ssh_close.append( False )
+                heartbeat_paramiko_close.append( False )
                 
-                # thread_ssh = threading.Thread(target=heartbeat_ssh,args=(ssh_conns,len(heartbeat_ssh_close)-1))
-                # thread_ssh.setDaemon(True)
-                # thread_ssh.start()
+                thread_ssh = threading.Thread(target=heartbeat_ssh,args=(ssh_conns,len(heartbeat_paramiko_close)-1))
+                thread_ssh.setDaemon(True)
+                thread_ssh.start()
+
+
+                thread_scp = threading.Thread(target=heartbeat_scp,args=(scp_conns,len(heartbeat_paramiko_close)-1))
+                thread_scp.setDaemon(True)
+                thread_scp.start()
+
+
+                
                 while(1):
                     cmds={}
 
@@ -792,7 +841,7 @@ else:
 
 
                     if( p_cmd == 'exit'):
-                        # heartbeat_ssh_close[len(heartbeat_ssh_close)-1] = True
+                        heartbeat_paramiko_close[len(heartbeat_paramiko_close)-1] = True
                         for server_num in server_list:
                             server_num = int(server_num)
                             print '\33[31m正在断开连接：%s(%s) \33[0m' %(
@@ -813,9 +862,11 @@ else:
                             print ('\33[34m%d:\33[31m%s(%s)\33[0m' %(server_num,server_info['name'],hideip_fun(server_info['host']) ) )
                             
                             cmd ='''
+echo '\33[32m';\
 date -R;\
 echo 内网IP:$(ifconfig |head -n 2|grep "inet addr"|cut -b 21-80);\
 echo 系统:'\33[34m'$(head -n 1 /etc/issue) $(getconf LONG_BIT)位'\33[0m';\
+echo '\33[32m';\
 echo cpu:$(cat /proc/cpuinfo |grep "model name"| wc -l)核;\
 cat /proc/meminfo |grep 'MemTotal';\
 echo cpu使用情况:;\
@@ -826,6 +877,7 @@ echo 负载:;\
 uptime;\
 echo 磁盘使用:;\
 df -hl;\
+echo '\33[0m'\
 '''
                             print ssh_cmd(server_num,cmd)
                         continue
