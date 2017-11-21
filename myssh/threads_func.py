@@ -18,7 +18,12 @@ def threads_handle(threads):
         t.start()
     for t in threads:
         t.join()
-                
+
+
+def scan_document(name,server_num):
+    data.client_file[server_num] = ssh.show_remote_file(
+        server_num,
+        data.paths[ server_num ] )
 
 
 #ssh心跳定时执行是否关闭

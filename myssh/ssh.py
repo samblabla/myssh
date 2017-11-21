@@ -2,6 +2,7 @@
 import paramiko
 
 import data
+import common
 
 def login(host,user,pwd,port):
     #建立ssh连接
@@ -51,3 +52,40 @@ def create_conn(server_num):
         data.servers[server_num]['password'],
         port
         )
+
+
+def show_remote_file(server_num,remotePath):
+    getdir_cmd = '''
+function getdir(){
+    for t_element in `ls $1 --full-time|awk '{if(NR!=1) print}'|awk '{print $9"❂"$6"."$7}'`
+    do 
+        local element=$t_element
+            OLD_IFS="$IFS" 
+        IFS="❂" #shell分隔符只能用一位的
+        local arr=($element) 
+            IFS="$OLD_IFS"
+        dir_or_file=$1"/"${arr[0]}
+        if [ -d $dir_or_file ]
+            then 
+                getdir $dir_or_file
+        else
+            echo $dir_or_file' '${arr[1]}
+        fi  
+    done
+}
+getdir .
+'''
+    temp_file_info = cmd(server_num, 'cd '+remotePath+' &&'+getdir_cmd)
+    file_info = {}
+    if len(temp_file_info)>0:
+        temp_folder= remotePath.split('/')
+        folder_name = temp_folder[len(temp_folder)-1]
+        for i in temp_file_info.split('\n'):
+            temp_i = i.split(' ')
+            temp_time = temp_i[1].split('.')
+            file_path =u''+folder_name+ temp_i[0][1:]
+            file_info[ file_path ] = common.strToTimestamp(temp_time[0]+' '+temp_time[1])
+
+    print('%d:扫描完成' %server_num)
+
+    return file_info

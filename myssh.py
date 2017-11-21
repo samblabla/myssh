@@ -175,50 +175,6 @@ def check_down( server_num,remotePath,localPath,fileName ,cmdPath):#检查下载
 
 
 
-def show_remote_file(server_num,remotePath):
-    getdir_cmd = '''
-function getdir(){
-    for t_element in `ls $1 --full-time|awk '{if(NR!=1) print}'|awk '{print $9"❂"$6"."$7}'`
-    do 
-        local element=$t_element
-            OLD_IFS="$IFS" 
-        IFS="❂" #shell分隔符只能用一位的
-        local arr=($element) 
-            IFS="$OLD_IFS"
-        dir_or_file=$1"/"${arr[0]}
-        if [ -d $dir_or_file ]
-            then 
-                getdir $dir_or_file
-        else
-            echo $dir_or_file' '${arr[1]}
-        fi  
-    done
-}
-getdir .
-'''
-    temp_file_info = ssh.cmd(server_num, 'cd '+remotePath+' &&'+getdir_cmd)
-    file_info = {}
-    if len(temp_file_info)>0:
-        temp_folder= remotePath.split('/')
-        folder_name = temp_folder[len(temp_folder)-1]
-        for i in temp_file_info.split('\n'):
-            temp_i = i.split(' ')
-            temp_time = temp_i[1].split('.')
-            file_path =u''+folder_name+ temp_i[0][1:]
-            file_info[ file_path ] = strToTimestamp(temp_time[0]+' '+temp_time[1])
-
-    print('%d:扫描完成' %server_num)
-
-    return file_info
-
-def strToTimestamp(dt):
-    #转换成时间数组
-    timeArray = time.strptime(dt, "%Y-%m-%d %H:%M:%S")
-    #转换成时间戳
-    timestamp = time.mktime(timeArray)
-    return timestamp
-
-
 
 def relation_add( l ,i ,sign):
     global relation 
@@ -488,8 +444,9 @@ else:
                             server_num,
                             'cd ./' )
 
-                if( server_info.has_key('description') ):
-                    print( '\33[32m' + server_info['description'].replace('#',' \33[35m#').replace('\\n ','\33[32m\n') +'\33[0m\n' )
+                    if( server_info.has_key('description') ):
+                        print '\33[34m%d:\33[31m%s(%s) \33[0m' %(server_num,server_info['name'],common.hideip_fun(server_info['host']))
+                        print( '\33[32m' + str(server_info['description']).replace('#',' \33[35m#').replace('\\n ','\33[32m\n') +'\33[0m\n' )
 
                 readline.set_completer(complete_path)
                 
@@ -593,7 +550,7 @@ echo '\33[0m'\
 
                     if(p_cmd[0:5] =='sync '):
                         sync_info = p_cmd.split( '>' )
-                        client_file={}
+                        data.client_file={}
                         add_file ={}
                         temp_master  =  sync_info[0].split(' ')
                         temp_master = list_del_empty( temp_master )
@@ -609,17 +566,23 @@ echo '\33[0m'\
                             client_server.extend( server_list )
                             client_server.remove( master_server )
 
-                        master_file = show_remote_file(
+                        master_file = ssh.show_remote_file(
                             master_server,
                             data.paths[ master_server ])
                         master_remote_path = data.paths[master_server]
+                        if not master_file:
+                            print('  没有需要同步的文件')
+                            continue
+                        
+                        scan_documents = []
+                        for server_num in client_server:
+                            server_num = int(server_num)
+                            scan_documents.append( threading.Thread(target=threads_func.scan_document,args=('scan_document',server_num)) )
+                        threads_func.threads_handle(scan_documents)
 
                         is_all_sync_file = False
                         for server_num in client_server:
                             server_num = int(server_num)
-                            client_file[server_num] = show_remote_file(
-                                server_num,
-                                data.paths[ server_num ] )
                             server_info = result[ server_num ]
                             print( '\33[34m%d:\33[31m%s(%s)\33[0m' %(
                                 server_num,server_info['name'],
@@ -629,8 +592,8 @@ echo '\33[0m'\
                             is_sync_file= False
                             
                             for file_name in master_file:
-                                if( client_file[server_num].has_key(file_name)):
-                                    if( master_file[ file_name ] > client_file[ server_num ][ file_name ]):
+                                if( data.client_file[server_num].has_key(file_name)):
+                                    if( master_file[ file_name ] > data.client_file[ server_num ][ file_name ]):
 
                                         x = time.localtime( master_file[ file_name ] )
                                         mtime = time.strftime('%Y-%m-%d %H:%M:%S',x)

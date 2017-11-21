@@ -10,6 +10,9 @@ paths={}
 
 cmd_cache={}
 
+client_file={}
+
+
 heartbeat_paramiko_close = list()
 
 hideip = False
