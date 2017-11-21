@@ -467,16 +467,14 @@ else:
                 server_len =len( server_list )
 
                 connect_threads = []
-
+                for server_num in server_list:
+                    connect_threads.append( threading.Thread(target=threads_func.threads_connect,args=('connect',server_num)) )
+                threads_func.threads_handle(connect_threads)
+                
                 for server_num in server_list: 
                     server_num = int(server_num)
                     server_info = result[ server_num ]
-                    print '\33[34m%d:\33[31m正在连接：%s(%s) \33[0m' %(server_num,server_info['name'],common.hideip_fun(server_info['host']))
-                    ssh.create_conn(server_num)
-                    sftp.create_conn(server_num)
 
-                 
-                    
                     if( server_info.has_key('defaultPath') ):
                         temp_path = ssh.cd(server_num ,'cd ' + server_info['defaultPath'])
                         if( temp_path ):

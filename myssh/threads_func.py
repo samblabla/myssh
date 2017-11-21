@@ -1,15 +1,24 @@
 #coding:utf-8
 
 import data
+import ssh
+import sftp
 import common
 import time
 
-''' def threads_connect():
-    print '\33[34m%d:\33[31m正在连接：%s(%s) \33[0m' %(server_num,server_info['name'],common.hideip_fun(server_info['host']))
-    create_ssh_conn(server_num)
-    create_scp_conn(server_num)
- '''
 
+def threads_connect(name,i):
+    ssh.create_conn(i)
+    sftp.create_conn(i)
+    print '\33[34m%d:\33[31m连接成功：%s(%s) \33[0m' %(i,data.servers[i]['name'],common.hideip_fun(data.servers[i]['host']))
+
+def threads_handle(threads):
+    for t in threads:
+        t.setDaemon(True)
+        t.start()
+    for t in threads:
+        t.join()
+                
 
 
 #ssh心跳定时执行是否关闭
