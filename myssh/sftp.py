@@ -2,6 +2,8 @@
 import paramiko
 import math
 import sys
+import os
+from stat import S_ISDIR
 
 import data
 
@@ -22,7 +24,7 @@ def upload(server_num,localFile,remoteFile):
         result=sftp.put(localFile,remoteFile,printTotals)
         print ''
     except Exception, e:
-        if str(e) == 'division by zero':
+        if str(e)[-7:] == 'by zero':
             return
         # print str(e)
         print '发生错误,尝试重连...'
@@ -41,7 +43,7 @@ def down(server_num,remoteFile,localFile):
         result=sftp.get(remoteFile,localFile, printTotals )
         print('')
     except Exception, e:
-        if str(e) == 'division by zero':
+        if str(e)[-7:] == 'by zero':
             return
         print e
         print '发生错误,尝试重连...'
@@ -79,12 +81,16 @@ def downs(server_num,remotePath,localPath):
                 pass  
             for file in walker[2]:
                 print( ' '+os.path.join(walker[0],file) )
-                sftp.get(os.path.join(walker[0],file),os.path.join(localPath,walker[0],file), printTotals)
-                print('')
+                try:
+                    sftp.get(os.path.join(walker[0],file),os.path.join(localPath,walker[0],file), printTotals)
+                    print('')
+                except Exception,e:
+                    if str(e)[-7:] == 'by zero':
+                        pass
     except Exception,e:
-        if str(e) == 'division by zero':
-            return
-        # print e
+        if str(e)[-7:] == 'by zero':
+            pass
+        print e
         print '发生错误,尝试重连...'
 
         create_conn(server_num)

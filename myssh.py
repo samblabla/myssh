@@ -9,7 +9,6 @@ import time
 
 import yaml
 import re
-from stat import S_ISDIR
 
 import tab
 import platform
@@ -141,7 +140,7 @@ def check_down( server_num,remotePath,localPath,fileName ,cmdPath):#检查下载
     try:
         scp.listdir_attr(remotePath)
         cmd = 'find ' + remotePath + ' -type f | wc -l'
-        file_num = ssh.cmd(server_num,cmd)
+        file_num = int( ssh.cmd(server_num,cmd) )
         if( file_num >15 ):
             global new_time
             new_time = str( new_time )
@@ -171,6 +170,7 @@ def check_down( server_num,remotePath,localPath,fileName ,cmdPath):#检查下载
             sftp.downs(server_num,remotePath,localPath)
 
     except Exception,e:
+        print e
         sftp.down(server_num,remotePath,localPath+fileName)
 
 
