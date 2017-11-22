@@ -59,6 +59,8 @@ def heartbeat_scp(scp_conns,close_i):
             break
         try:
             for i in scp_conns:
+                if data.scp_isusing.has_key(i) and data.scp_isusing[i] == True :
+                    continue
                 scp_conns[i].listdir_attr('/')
         except Exception,e:
             print '\n'

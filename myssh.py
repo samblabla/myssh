@@ -136,10 +136,10 @@ def check_up(server_num,sftp_conns,localPath,remotePath,fileName,cmdPath):
 
     
 def check_down( server_num,remotePath,localPath,fileName ,cmdPath):#检查下载
-    sftp = data.scp_conns[ server_num ]
+    scp = data.scp_conns[ server_num ]
 
     try:
-        sftp.listdir_attr(remotePath)
+        scp.listdir_attr(remotePath)
         cmd = 'find ' + remotePath + ' -type f | wc -l'
         file_num = ssh.cmd(server_num,cmd)
         if( file_num >15 ):
@@ -256,7 +256,6 @@ def ssh_cmd_func(server_num,result,p_cmd,ssh_conns,source_path,n):
         cmds = cmd.split(' ')
         fileName = cmds[1].split('/')
         os.system( 'mkdir -p "'+source_path+server_info['name']+'/"' )
-
         check_down(
             server_num,
             data.paths[server_num] + '/' + cmds[1],

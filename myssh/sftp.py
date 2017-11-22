@@ -17,8 +17,8 @@ def login(host,user,pwd,port):
 
 def upload(server_num,localFile,remoteFile):
     sftp = data.scp_conns[ server_num ]
+    data.scp_isusing[server_num] = True
     try:
-
         result=sftp.put(localFile,remoteFile,printTotals)
         print ''
     except Exception, e:
@@ -30,10 +30,12 @@ def upload(server_num,localFile,remoteFile):
         create_conn(server_num)
 
         upload(server_num,localFile,remoteFile)
+    data.scp_isusing[server_num] = False
 
 
 def down(server_num,remoteFile,localFile):
     sftp = data.scp_conns[ server_num ]
+    data.scp_isusing[server_num] = True
     # Copy a remote file (remotePath) from the SFTP server to the local host
     try:
         result=sftp.get(remoteFile,localFile, printTotals )
@@ -47,9 +49,11 @@ def down(server_num,remoteFile,localFile):
         create_conn(server_num)
         
         down(server_num,remoteFile,localFile)
+    data.scp_isusing[server_num] = False
 
 def downs(server_num,remotePath,localPath):
     sftp = data.scp_conns[ server_num ]
+    data.scp_isusing[server_num] = True
     
     #  recursively download a full directory  
     #  Harder than it sounded at first, since paramiko won't walk  
@@ -86,7 +90,8 @@ def downs(server_num,remotePath,localPath):
         create_conn(server_num)
 
         downs(server_num,remotePath,localPath)
-
+    data.scp_isusing[server_num] = False
+    
 
 def sftp_walk(sftp,remotePath):
     #建立一个sftp客户端对象，通过ssh transport操作远程文件
@@ -174,9 +179,7 @@ def create_conn(server_num):
 
 def printTotals(transferred, toBeTransferred):
     
-
-    percent =(transferred / toBeTransferred ) *100
-
+    percent =(transferred / float(toBeTransferred) ) *100
     progress =math.floor(  int(percent) /2  )
     if( percent >10 ):
         percent = "  %.2f" %percent

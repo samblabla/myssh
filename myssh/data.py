@@ -12,6 +12,7 @@ cmd_cache={}
 
 client_file={}
 
+scp_isusing={}
 
 heartbeat_paramiko_close = list()
 
