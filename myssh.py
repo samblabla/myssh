@@ -3,7 +3,6 @@ from __future__ import division
 
 import os
 import sys
-import paramiko
 import readline
 import time
 
@@ -39,8 +38,6 @@ ssh_login_cmd = re.compile(r'^(\d+) ([\w\W]{2,})')#多台服务器操作时 判�
 reload(sys)
 sys.setdefaultencoding( "utf-8" )
 COMMANDS = ['cmd ','quit','help']
-
-
 def complete(text, state):
 
     for cmd in COMMANDS:
@@ -270,7 +267,7 @@ def ssh_cmd_func(server_num,result,p_cmd,ssh_conns,source_path,n):
     elif(p_cmd == 'ls'):
         cmd = 'cd '+data.paths[server_num]+' && '+ cmd
         cmds[ n ] = ssh.cmd(server_num, cmd)
-        print( cmds[ n ].replace('\n',' ') )
+        print( cmds[ n ].replace('\n','   ') )
     else:
         cmd = 'cd '+data.paths[server_num]+' && '+ cmd
         cmds[ n ] = ssh.cmd(server_num, cmd)
@@ -480,12 +477,17 @@ else:
                             ssh_complete = server_num
                             path_complete = data.paths[ server_num ]
                             
+
                             try:
-                                p_cmd = raw_input( '\33[34m%d:\33[33m%s@%s(%s):%s#\33[0m ' %(
-                                    server_num,server_info['user'],
+                                print( '\33[34m%d:\33[33m%s@%s(%s):%s#\33[0m ' %(
+                                    server_num,
+                                    server_info['user'],
                                     server_info['name'],
                                     common.hideip_fun(server_info['host']),
                                     data.paths[server_num] ))
+
+                                p_cmd = raw_input(':' )
+
                             except KeyboardInterrupt:
                                 p_cmd ='exit'
                                 print('')
@@ -495,8 +497,7 @@ else:
                                 server_num,
                                 server_info['user'],
                                 server_info['name'],
-                                common.hideip_fun(server_info['host'])
-                                ,
+                                common.hideip_fun(server_info['host']),
                                 data.paths[server_num] ))
 
 
