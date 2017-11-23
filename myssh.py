@@ -163,15 +163,16 @@ def check_down( server_num,remotePath,localPath,fileName ,cmdPath):#检查下载
                 else:
                     print '操作失败'
             elif(input_result == 'n'):
-                return
+                return 'n'
             else:
-                return
+                return 'n'
         else:
             sftp.downs(server_num,remotePath,localPath)
 
     except Exception,e:
         print e
         sftp.down(server_num,remotePath,localPath+fileName)
+    return 'ok'
 
 
 
@@ -256,16 +257,20 @@ def ssh_cmd_func(server_num,result,p_cmd,ssh_conns,source_path,n):
         cmds = cmd.split(' ')
         fileName = cmds[1].split('/')
         os.system( 'mkdir -p "'+source_path+server_info['name']+'/"' )
-        check_down(
+        rs = check_down(
             server_num,
             data.paths[server_num] + '/' + cmds[1],
             source_path+server_info['name']+'/' ,
             fileName[ len(fileName)-1],data.paths[server_num] )
-        if symtem_name == 'Darwin':
-            os.system('open "'+source_path+server_info['name']+'/"')
-        else:
-            print('文件已下载到 "'+source_path+server_info['name']+'/"')
-
+        if rs != 'n':
+            if symtem_name == 'Darwin':
+                os.system('open "'+source_path+server_info['name']+'/"')
+            else:
+                print('文件已下载到 "'+source_path+server_info['name']+'/"')
+    elif(p_cmd == 'ls'):
+        cmd = 'cd '+data.paths[server_num]+' && '+ cmd
+        cmds[ n ] = ssh.cmd(server_num, cmd)
+        print( cmds[ n ].replace('\n',' ') )
     else:
         cmd = 'cd '+data.paths[server_num]+' && '+ cmd
         cmds[ n ] = ssh.cmd(server_num, cmd)
