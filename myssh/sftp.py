@@ -65,7 +65,7 @@ def downs(server_num,remotePath,localPath):
 
     try:
         print('下载 %s 中 ...' %remotePath)
-        sftp.listdir_attr(remotePath)
+        # sftp.listdir_attr(remotePath)
 
         parent=os.path.split(remotePath)[1]
 

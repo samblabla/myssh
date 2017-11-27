@@ -426,7 +426,7 @@ else:
 
                 connect_threads = []
                 for server_num in server_list:
-                    connect_threads.append( threading.Thread(target=threads_func.threads_connect,args=('connect',server_num)) )
+                    connect_threads.append( threading.Thread(target=threads_func.threads_connect,args=('连接',server_num)) )
                 threads_func.threads_handle(connect_threads)
                 
                 for server_num in server_list: 
@@ -514,10 +514,10 @@ else:
                             data.scp_conns[ server_num ].close()
                         break
                     if(p_cmd == 'f5'):
-                        for server_num in server_list:  
-                            print '\33[34m%d:\33[31m正在重连：%s(%s) \33[0m' %(server_num,server_info['name'],common.hideip_fun(server_info['host']))
-                            ssh.create_conn(server_num)
-                            sftp.create_conn(server_num)
+                        reconnect_threads = []
+                        for server_num in server_list:
+                            reconnect_threads.append( threading.Thread(target=threads_func.threads_connect,args=('重连',server_num)) )
+                        threads_func.threads_handle(reconnect_threads)
                         continue
                     if(p_cmd == 'detail'):
                         for server_num in server_list:

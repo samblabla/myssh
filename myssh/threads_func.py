@@ -5,12 +5,13 @@ import ssh
 import sftp
 import common
 import time
+import threading
 
 
 def threads_connect(name,i):
     ssh.create_conn(i)
     sftp.create_conn(i)
-    print '\33[34m%d:\33[31m连接成功：%s(%s) \33[0m' %(i,data.servers[i]['name'],common.hideip_fun(data.servers[i]['host']))
+    print '\33[34m%d:\33[31m%s成功：%s(%s) \33[0m' %(i,name,data.servers[i]['name'],common.hideip_fun(data.servers[i]['host']))
 
 def threads_handle(threads):
     for t in threads:
@@ -36,11 +37,14 @@ def heartbeat_ssh(ssh_conns,close_i):
                 ssh_conns[i].exec_command('pwd')
         except Exception,e:
             print '\n'
-            for i in ssh_conns:
+
+            reconnect_threads = []
+            for server_num in ssh_conns:
                 if data.heartbeat_paramiko_close[close_i]:
                     break
-                print '重连ssh ',i
-                ssh.create_conn(i)
+                reconnect_threads.append( threading.Thread(target=threads_connect,args=('重连',server_num)) )
+            threads_handle(reconnect_threads)
+
             for i in ssh_conns:
                 if data.heartbeat_paramiko_close[close_i]:
                     break
@@ -64,11 +68,12 @@ def heartbeat_scp(scp_conns,close_i):
                 scp_conns[i].listdir_attr('/')
         except Exception,e:
             print '\n'
-            for i in scp_conns:
+            reconnect_threads = []
+            for server_num in scp_conns:
                 if data.heartbeat_paramiko_close[close_i]:
                     break
-                print '重连scp ',i
-                sftp.create_conn(i)
+                reconnect_threads.append( threading.Thread(target=threads_connect,args=('重连',server_num)) )
+            threads_handle(reconnect_threads)
             for i in scp_conns:
                 if data.heartbeat_paramiko_close[close_i]:
                     break
