@@ -16,6 +16,8 @@ import threading
 
 import config
 
+import pexpect
+
 from myssh import data
 from myssh import ssh
 from myssh import sftp
@@ -26,7 +28,6 @@ symtem_name = platform.system()
 
 sshpass = config.sshpass
 source_path = config.source_path
-known_hosts = config.known_hosts
 editor = config.editor
 yaml_path = config.yaml_path
 
@@ -278,17 +279,7 @@ def ssh_cmd_func(server_num,result,p_cmd,ssh_conns,source_path,n):
 
 
 
-f_pubssh = open( known_hosts,"r")
 
-local_pubssh = []
-for line in f_pubssh.readlines():
-    new_line = line.split(' ')[0];
-
-    if( len( new_line.split(',') ) > 1 ):
-        for x_ip in new_line.split(','):
-             local_pubssh.append(  x_ip  )
-    else:
-        local_pubssh.append(  new_line  )
 if len(sys.argv) > 1:
     for operate in sys.argv[1:]:
         if operate  == 'hideip':
@@ -330,7 +321,7 @@ else:
                 else:
                     show_str += '\33[42m\33[30m  %s  \33[0m\n' % ( v['name'] ) 
                 for l in v['group']:
-
+                    l['password'] = str(l['password'])
                     result.append( l )
 
 
@@ -341,30 +332,19 @@ else:
                     i+=1
                 show_str +='\n'
             else:
+                v['password'] = str(v['password'])
                 result.append( v )
                 show_str += relation_add(v,i,'\33[40m \33[0m ')
                 i+=1
 
         data.servers = result
         if( len(sys.argv) >1 and  sys.argv[1] == "verify" ):
+            n = 0
+            verify_threads = []
             for server_info in result:
-                if server_info['host'] not in local_pubssh:
-                    if(server_info.has_key('port')):
-                        port = server_info['port']
-                    else:
-                        port = 22
-                    print('\n\33[31m%s(%s)还没有添加公钥,输入 yes后 ctrt+c退回 \33[0m\n\n' %(
-                        server_info['name'],
-                        common.hideip_fun(server_info['host']) ))
-                    print "ssh %s@%s  -p %s" %(
-                        server_info['user'],
-                        common.hideip_fun(server_info['host']),
-                        port )
-                    os.system("ssh %s@%s  -p %s" %(
-                        server_info['user'],
-                        server_info['host'],
-                        port ))
-
+                verify_threads.append( threading.Thread(target=threads_func.ssh_verify,args=('验证',n)) )
+                n += 1
+            threads_func.threads_handle(verify_threads)
             
             exit()
 
@@ -487,7 +467,7 @@ else:
                                     common.hideip_fun(server_info['host']),
                                     data.paths[server_num] ))
 
-                                p_cmd = raw_input(':' )
+                                p_cmd = raw_input('> ')
 
                             except KeyboardInterrupt:
                                 p_cmd ='exit'
