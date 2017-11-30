@@ -92,32 +92,25 @@ def check_up(server_num,sftp_conns,localPath,remotePath,fileName,cmdPath):
                 new_time = str( new_time )
 
                 if ( n != 0 ):
-                    print '开始上传 %s_%s.tar '  %(fileName,new_time )
+                    print '开始上传 %s_%s.tar.gz '  %(fileName,new_time )
                 else:
-                    cmd = 'tar -czf %s_%s.tar %s' %( fileName,new_time , fileName)
+                    cmd = 'tar -czf %s_%s.tar.gz %s' %( fileName,new_time , fileName)
                     os.system( cmd )    
-                    print '打包完成,开始上传 %s_%s.tar '  %(fileName,new_time )
-                sftp.upload(server_num,localPath+'_'+new_time+'.tar',remotePath + fileName+'_'+new_time+'.tar')
+                    print '打包完成,开始上传 %s_%s.tar.gz '  %(fileName,new_time )
+                sftp.upload(server_num,localPath+'_'+new_time+'.tar.gz',remotePath + fileName+'_'+new_time+'.tar.gz')
 
                 # input_result2 = raw_input( '上传完成,是否解压(y/n):' )
                 input_result2 = 'y'
 
                 if( input_result2 == 'y'):
 
-                    cmd = 'tar -xvf %s_%s.tar'  %( fileName,new_time) 
+                    cmd = 'tar -xvf %s_%s.tar.gz'  %( fileName,new_time) 
                     print( cmd )
-                    cmd = 'cd '+cmdPath+' && '+ cmd
+                    result = ssh.cmd(server_num,'cd '+cmdPath+' && '+ cmd)
 
-                    result = ssh.cmd(server_num,cmd)
-
-                    if( stdout.read()[0:-1] == '' ):
-                        print( result )
-
-                    cmd= 'rm %s_%s.tar'     %( fileName,new_time)
+                    cmd= 'rm %s_%s.tar.gz' %( fileName,new_time)
                     print( cmd )
-                    cmd = 'cd '+cmdPath+' && '+ cmd
-                    # stdin, stdout, stderr = ssh.exec_command(cmd)
-                    result = ssh.cmd(server_num,cmd)
+                    result = ssh.cmd(server_num,'cd '+cmdPath+' && '+ cmd)
                 else:
                     return
             else:
@@ -152,14 +145,14 @@ def check_down( server_num,remotePath,localPath,fileName ,cmdPath):#检查下载
                 if fileName == '':
                     temp=remotePath.split('/')
                     fileName = temp[ len(temp)-2]
-                cmd = 'tar -czf %s_%s.tar %s' %( fileName, new_time , fileName)
+                cmd = 'tar -czf %s_%s.tar.gz %s' %( fileName, new_time , fileName)
                 print( cmd )
                 cmd = 'cd '+cmdPath+' && '+ cmd
                 cmd_result = ssh.cmd(server_num,cmd)
 
                 if( cmd_result == '' ):
-                    print( '打包完成,开始下载 %s_%s.tar '  %(fileName ,new_time) )
-                    sftp.down(server_num,cmdPath + '/'+ fileName + '_'+new_time+ '.tar',localPath+fileName+'_'+new_time+'.tar')
+                    print( '打包完成,开始下载 %s_%s.tar.gz '  %(fileName ,new_time) )
+                    sftp.down(server_num,cmdPath + '/'+ fileName + '_'+new_time+ '.tar.gz',localPath+fileName+'_'+new_time+'.tar.gz')
 
                 else:
                     print '操作失败'
@@ -241,8 +234,9 @@ def ssh_cmd_func(server_num,result,p_cmd,ssh_conns,source_path,n):
 
     elif( p_cmd[0:2] ==  'up' ):
         cmds = cmd.split(' ')
+        if cmds[1][len(cmds[1])-1] == '/':
+            cmds[1] = cmds[1][0:len(cmds[1])-1]
         fileName = cmds[1].split('/')
-        fileName[ len(fileName)-1]
 
         check_up(server_num, data.scp_conns[ server_num ],source_path+'up/'+cmds[1],data.paths[server_num]+'/', fileName[ len(fileName)-1] ,data.paths[server_num])
     # elif(p_cmd[0:5] =='downs'):
@@ -501,7 +495,7 @@ else:
                         continue
                     if(p_cmd == 'detail'):
                         for server_num in server_list:
-                            print ('\33[34m%d:\33[31m%s(%s)\33[0m' %(server_num,server_info['name'],common.hideip_fun(server_info['host']) ) )
+                            print ('\33[34m%d:\33[31m%s(%s)\33[0m' %(server_num,data.servers[server_num]['name'],common.hideip_fun(data.servers[server_num]['host']) ) )
                             
                             cmd ='''
 echo '\33[32m';\
