@@ -373,10 +373,11 @@ def main():
     \33[33mcmd\33[0m    服务器编号[...] 如 cmd 1 2 3 ,可操作多台服务器
     \33[33mcmd -l\33[0m 服务器编号  操作与服务器有关联的多台服务器 关联规则 服务器名-数字
     \33[33mcmd -g\33[0m 服务器编号  操作分组中的多台服务器,需要配置分组code
-        \33[33mup\33[0m     上传文件 如 up 本地文件名 
+        \33[33mup\33[0m     上传文件 如 up 本地文件名 (上传"~/myssh_file/up/"目录下的文件)
         \33[33mdown\33[0m   下载文件 如 down 服务器文件名 本地文件名(可选)
-        \33[33msync\33[0m   同步文件 "sync 服务器id > 被同步的服务器id(多个使用空格分隔)" 如 sync 1 > 2 3
-
+        \33[33msync\33[0m   同步文件 "sync 服务器id > 被同步的服务器id(多个使用空格分隔)",如 sync 1 > 2 3
+        \33[33mcopy\33[0m   复制文件 "copy 服务器id 文件名> 被同步的服务器id(多个使用空格分隔)",如 copy 1 1.txt > 2 3
+        
         多台操作时 使用 "服务器id:操作指令" 可操作单台服务器 如 1:ls
 
     \33[33mexit\33[0m   返回上级操作
@@ -545,7 +546,54 @@ def main():
                             certain = raw_input( '确定要执行删除命令吗?(y/n):' )
                             if( certain !='y'):
                                 continue
+                        if( p_cmd[0:5] == 'copy '):
+                            sync_info = p_cmd.split( '>' )
+                            data.client_file={}
+                            add_file ={}
+                            temp_master  =  sync_info[0].split(' ')
 
+                            temp_master = list_del_empty( temp_master )
+
+                            master_server = int( temp_master[1] )
+
+                            master_info = result[ server_num ]
+                            
+                            if  len(sync_info) > 1 :
+
+                                client_server = sync_info[1].split(' ')
+                                client_server = list_del_empty( client_server )
+
+                            else:
+                                client_server =list()
+                                client_server.extend( server_list )
+                                client_server.remove( master_server )
+                            
+                            file_name = temp_master[2]
+
+                            if file_name[len(file_name)-1] == '/':
+                                file_name = file_name[0:len(file_name)-1]
+                            fileName = file_name.split('/')
+                            os.system( 'mkdir -p "'+source_path+master_info['name']+'/"' )
+                            rs = check_down(
+                                master_server,
+                                data.paths[master_server] + '/' + file_name,
+                                source_path+master_info['name']+'/' ,
+                                fileName[ len(fileName)-1],data.paths[master_server] )
+                            if rs == 'n':
+                                print 'error'
+                                continue
+                            n = 0
+                            for server_num in client_server:
+                                server_num = int(server_num)
+                                server_info = result[ server_num ]
+                                print( '\33[34m%d:\33[31m%s@%s(%s)\33[0m 上传中' %(
+                                        server_num,server_info['user'],
+                                        server_info['name'],
+                                        common.hideip_fun(server_info['host']) ))
+           
+                                check_up(server_num, data.scp_conns[ server_num ],source_path+master_info['name']+'/'+file_name,data.paths[server_num]+'/', fileName[ len(fileName)-1] ,data.paths[server_num],n)
+
+                            continue
                         if(p_cmd[0:5] =='sync '):
                             sync_info = p_cmd.split( '>' )
                             data.client_file={}

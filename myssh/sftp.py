@@ -27,8 +27,6 @@ def upload(server_num,localFile,remoteFile):
         result=sftp.put(localFile,remoteFile,printTotals)
         print ''
     except Exception, e:
-        if str(e)[-7:] == 'by zero':
-            return
         if str(e)[-12:] == 'No such file':
             return
         print str(e)
@@ -48,8 +46,6 @@ def down(server_num,remoteFile,localFile):
         result=sftp.get(remoteFile,localFile, printTotals )
         print('')
     except Exception, e:
-        if str(e)[-7:] == 'by zero':
-            return
         if str(e)[-12:] == 'No such file':
             return
         print e
@@ -92,11 +88,8 @@ def downs(server_num,remotePath,localPath):
                     sftp.get(os.path.join(walker[0],file),os.path.join(localPath,walker[0],file), printTotals)
                     print('')
                 except Exception,e:
-                    if str(e)[-7:] == 'by zero':
-                        pass
+                    print e
     except Exception,e:
-        if str(e)[-7:] == 'by zero':
-            pass
         print e
         print '发生错误,尝试重连...'
 
@@ -140,7 +133,8 @@ def up_files( sftp,localPath,remotePath ):
         for file in walker[2]:
             if( file != '.DS_Store' ):
                 print(  os.path.join(remotePath,walker[0],file )  )
-                sftp.put(os.path.join(walker[0],file),os.path.join(remotePath,walker[0],file))  
+                sftp.put(os.path.join(walker[0],file),os.path.join(remotePath,walker[0],file),printTotals)  
+                print ''
 
 
 
@@ -159,8 +153,10 @@ def create_conn(server_num):
 
 
 def printTotals(transferred, toBeTransferred):
-    
-    percent =(transferred / float(toBeTransferred) ) *100
+    if toBeTransferred == 0:
+        percent = 100
+    else:
+        percent =(transferred / float(toBeTransferred) ) *100
     progress =math.floor(  int(percent) /2  )
     if( percent >10 ):
         percent = "  %.2f" %percent
