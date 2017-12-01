@@ -266,6 +266,23 @@ def ssh_cmd_func(server_num,result,p_cmd,ssh_conns,source_path,n):
         cmds[ n ] = ssh.cmd(server_num, cmd)
         print( cmds[ n ] )
 
+
+def get_local_pubsshs():
+    known_hosts_path = os.path.expanduser('~')+"/.ssh/known_hosts"
+    local_pubsshs = []
+    if os.path.exists(known_hosts_path):
+        f_pubssh = open( known_hosts_path,"r")
+        for line in f_pubssh.readlines():
+            new_line = line.split(' ')[0];
+
+            if( len( new_line.split(',') ) > 1 ):
+                for x_ip in new_line.split(','):
+                     local_pubsshs.append(  x_ip  )
+            else:
+                local_pubsshs.append(  new_line  )
+        f_pubssh.close()
+    return local_pubsshs
+
 def check_config_file():
     if os.path.isdir( os.path.expanduser('~')+'/.myssh' ):
         pass
@@ -867,7 +884,16 @@ def main():
                         port = server_info['port']
                     else:
                         port = '22'
-                    threads_func.ssh_verify('验证',server_num)
+
+
+                    local_pubsshs = get_local_pubsshs()
+                    if(
+                        server_info['host'] not in local_pubsshs 
+                        and
+                        '['+server_info['host']+']:'+str(port) not in local_pubsshs
+                    ):
+                        threads_func.ssh_verify('验证',server_num)
+
                     if( server_info.has_key('defaultPath') ):
 
                         os.system('''%s -p '%s' ssh %s@%s -p %s -t '\
