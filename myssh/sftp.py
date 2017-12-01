@@ -20,13 +20,18 @@ def login(host,user,pwd,port):
 def upload(server_num,localFile,remoteFile):
     sftp = data.scp_conns[ server_num ]
     data.scp_isusing[server_num] = True
+    if not os.path.exists(localFile):
+        print '本地文件不存在'
+        return
     try:
         result=sftp.put(localFile,remoteFile,printTotals)
         print ''
     except Exception, e:
         if str(e)[-7:] == 'by zero':
             return
-        # print str(e)
+        if str(e)[-12:] == 'No such file':
+            return
+        print str(e)
         print '发生错误,尝试重连...'
 
         create_conn(server_num)
@@ -44,6 +49,8 @@ def down(server_num,remoteFile,localFile):
         print('')
     except Exception, e:
         if str(e)[-7:] == 'by zero':
+            return
+        if str(e)[-12:] == 'No such file':
             return
         print e
         print '发生错误,尝试重连...'
@@ -136,38 +143,6 @@ def up_files( sftp,localPath,remotePath ):
                 sftp.put(os.path.join(walker[0],file),os.path.join(remotePath,walker[0],file))  
 
 
-
-def sftp_walk_time(sftp,remotePath):
-    #建立一个sftp客户端对象，通过ssh transport操作远程文件
-    files={}
-    folders=[]
-    if remotePath.split("/")[-1] =='Runtime':
-        return
-    if remotePath.split("/")[-1] =='ThinkPHP':
-        return
-    if remotePath.split("/")[-1] =='Uploads':
-        return
-    if remotePath.split("/")[-1] =='Pay':
-        return
-    if remotePath.split("/")[-1] =='Qrcode':
-        return
-        
-    # Copy a remote file (remotePath) from the SFTP server to the local host
-    try:
-        for f in sftp.listdir_attr(remotePath):
-            if S_ISDIR( f.st_mode ):  
-                folders.append(f.filename)
-            else:  
-                files[f.filename] = f.st_mtime
-
-        yield remotePath,folders,files  
-        for folder in folders:
-            new_path=os.path.join(remotePath,folder)  
-            for x in sftp_walk_time(sftp,new_path):  
-                yield x  
-    except Exception, e:
-        print e
-        # print '发生错误'
 
 def create_conn(server_num):
     if(data.servers[server_num].has_key('port')):

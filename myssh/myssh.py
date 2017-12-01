@@ -266,7 +266,7 @@ def ssh_cmd_func(server_num,result,p_cmd,ssh_conns,source_path,n):
         cmds[ n ] = ssh.cmd(server_num, cmd)
         print( cmds[ n ] )
 
-def check_confi_file():
+def check_config_file():
     if os.path.isdir( os.path.expanduser('~')+'/.myssh' ):
         pass
     else:
@@ -285,7 +285,7 @@ def main():
     global cmds
     global new_time
 
-    check_confi_file()
+    check_config_file()
     
     if len(sys.argv) > 1:
         for operate in sys.argv[1:]:
