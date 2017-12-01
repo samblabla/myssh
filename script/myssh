@@ -1,0 +1,6 @@
+#!/usr/bin/env python
+
+from myssh import myssh
+
+if __name__ == '__main__':
+    myssh.main()

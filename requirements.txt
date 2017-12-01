@@ -1,0 +1,4 @@
+pycrypto==2.6.1
+PyYAML==3.12
+paramiko==1.15.2
+pexpect==4.3.0
