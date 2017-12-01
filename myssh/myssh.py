@@ -819,6 +819,7 @@ def main():
                         port = server_info['port']
                     else:
                         port = '22'
+                    threads_func.ssh_verify('验证',server_num)
                     if( server_info.has_key('defaultPath') ):
 
                         os.system('''%s -p '%s' ssh %s@%s -p %s -t '\
