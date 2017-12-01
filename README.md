@@ -7,7 +7,7 @@ Mac OS和Linux上的命令行ssh管理工具
 ![](./doc/images/myssh.gif)
 
 
-###安装
+### 安装
 1.必须安装pip
 
  
@@ -23,7 +23,7 @@ python setup.py install
 make &&make install
 ```
 
-###服务器配置
+### 服务器配置
 编辑服务器配置文件（文件在 ~/.ssh/myssh.yml）
 
 ```
