@@ -26,7 +26,7 @@ def ssh_verify(name, i):
         i,
         server_info['user'],
         server_info['name'],
-        common.hideip_fun(server_info['host'])
+        common.hideipFun(server_info['host'])
         )
     
     try:
@@ -54,7 +54,7 @@ def ssh_verify(name, i):
 def threads_connect(name,i):
     ssh.create_conn(i)
     sftp.create_conn(i)
-    print '\33[34m%d:\33[31m%s成功：%s(%s) \33[0m' %(i,name,data.servers[i]['name'],common.hideip_fun(data.servers[i]['host']))
+    print '\33[34m%d:\33[31m%s成功：%s(%s) \33[0m' %(i,name,data.servers[i]['name'],common.hideipFun(data.servers[i]['host']))
 
 def threads_handle(threads):
     for t in threads:
@@ -95,7 +95,7 @@ def heartbeat_ssh(ssh_conns,close_i):
                     i,
                     data.servers[i]['user'],
                     data.servers[i]['name'],
-                    common.hideip_fun(data.servers[i]['host'])
+                    common.hideipFun(data.servers[i]['host'])
                     ,
                     data.paths[i] ))
         time.sleep(30)
@@ -124,7 +124,7 @@ def heartbeat_scp(scp_conns,close_i):
                     i,
                     data.servers[i]['user'],
                     data.servers[i]['name'],
-                    common.hideip_fun(data.servers[i]['host'])
+                    common.hideipFun(data.servers[i]['host'])
                     ,
                     data.paths[i] ))
         time.sleep(30)
