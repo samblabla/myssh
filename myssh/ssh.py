@@ -25,16 +25,19 @@ def cmd(server_num,cmd_str):
     return stdout.read()[0:-1]
 
 def cmd_cache(server_num,cmd_str):
-    if( not data.cmd_cache.has_key(cmd_str) ):
+    if not data.cmd_cache.has_key( server_num ):
+        data.cmd_cache[server_num] = {}
+    
+    if( not data.cmd_cache[server_num].has_key(cmd_str) ):
         result = cmd(server_num,cmd_str)
-        data.cmd_cache = {cmd_str: result}
-    return data.cmd_cache[ cmd_str ]
+        data.cmd_cache[server_num] = {cmd_str: result}
+    return data.cmd_cache[server_num][ cmd_str ]
 
 
 def cd(server_num,cmd_str):
     result = cmd(server_num,cmd_str+' && pwd')
     if( result == ''):
-        print('\n\33[31merror:目录不存在!!\33[0m')
+        print('\33[34m%d:\33[0merror:目录不存在!!' %server_num)
         return False
     else:
         return result

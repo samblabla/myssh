@@ -37,7 +37,6 @@ reload(sys)
 sys.setdefaultencoding( "utf-8" )
 COMMANDS = ['cmd ','quit','help']
 def complete(text, state):
-
     for cmd in COMMANDS:
         if cmd.startswith(text):
             if not state:
@@ -46,17 +45,21 @@ def complete(text, state):
                 state -= 1
 
 def complete_path(text, state):#自动补全
-    global ssh_complete,path_complete
-    cmd = 'cd '+path_complete+' && ls -F'
-    path =''
-    if '/' in text:
-        path = text[0:text.rindex('/')] +'/'
-        sub_text = text[text.rindex('/')+1:]
-        cmd = 'cd '+path_complete+' && cd ' + path +' && ls -F'
-    else:
-        sub_text = text
-    temp = ssh.cmd_cache( ssh_complete, cmd)
-    temp_list_file = temp.split('\n')
+    global server_list
+    temp_list_file=[]
+    for server_num in server_list:
+        cmd = 'cd '+ data.paths[ server_num ]+' && ls -F'
+        path =''
+        if '/' in text:
+            path = text[0:text.rindex('/')] +'/'
+            sub_text = text[text.rindex('/')+1:]
+            cmd = 'cd '+ data.paths[ server_num ]+' && cd ' + path +' && ls -F'
+        else:
+            sub_text = text
+        temp = ssh.cmd_cache( server_num, cmd)
+        temp_list_file.extend(temp.split('\n'))
+
+    temp_list_file = list(set(temp_list_file)) #去重
     list_file = list()
     for line in temp_list_file:
         if(line[-1] == '#' or line[-1]=='*' or line[-1]=='=' or line[-1]=='|' or line[-1]=='@'):
@@ -229,6 +232,8 @@ def ssh_cmd_func(server_num,result,p_cmd,ssh_conns,source_path,n):
         temp_path = ssh.cd(server_num,cmd )
         if( temp_path ):
             data.paths[server_num] = temp_path 
+            print('\33[34m%d:\33[0m\33[32mok\33[0m' %server_num)
+
         else:
             return 'notpath'
 
@@ -302,10 +307,10 @@ def check_config_file():
 
 
 def main():
-    global ssh_complete,path_complete
     global relation
     global cmds
-
+    global server_list
+    
     check_config_file()
     
     if len(sys.argv) > 1:
@@ -418,7 +423,7 @@ def main():
                 elif(server == 'quit' or server == 'exit' ):
                     exit()
                 elif(server.find('cmd ') != -1):
-                    
+                    server_list = []
 
                     server_nums =  server.split(' ')
                     server_nums = list_del_empty( server_nums )
@@ -489,9 +494,6 @@ def main():
                             server_info = data.servers[ server_num ]
 
                             if(server_len == i):
-                                ssh_complete = server_num
-                                path_complete = data.paths[ server_num ]
-                                
 
                                 try:
                                     print( '\33[34m%d:\33[33m%s@%s(%s):%s#\33[0m ' %(
@@ -784,8 +786,6 @@ def main():
                                             server_info = data.servers[ server_num ]
 
                                             if(server_len == i):
-                                                ssh_complete = server_num
-                                                path_complete = data.paths[ server_num ]
                                                 print( '\33[34m%d:\33[33m%s@%s(%s):%s#\33[0m%s' 
                                                     %( server_num,server_info['user'],
                                                         server_info['name'],
