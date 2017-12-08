@@ -57,7 +57,8 @@ def complete_path(text, state):#自动补全
         else:
             sub_text = text
         temp = ssh.cmd_cache( server_num, cmd)
-        temp_list_file.extend(temp.split('\n'))
+        if temp:
+            temp_list_file.extend(temp.split('\n'))
 
     temp_list_file = list(set(temp_list_file)) #去重
     list_file = list()
@@ -227,7 +228,7 @@ def ssh_cmd_func(server_num,result,p_cmd,ssh_conns,source_path,n):
 
     cmd = p_cmd
 
-    if( p_cmd[0:2] == 'cd'):
+    if( p_cmd[0:3] == 'cd '):
         cmd = 'cd '+data.paths[server_num]+' && '+ cmd
         temp_path = ssh.cd(server_num,cmd )
         if( temp_path ):
@@ -237,7 +238,7 @@ def ssh_cmd_func(server_num,result,p_cmd,ssh_conns,source_path,n):
         else:
             return 'notpath'
 
-    elif( p_cmd[0:2] ==  'up' ):
+    elif( p_cmd[0:3] ==  'up ' ):
         cmds = cmd.split(' ')
         if cmds[1][len(cmds[1])-1] == '/':
             cmds[1] = cmds[1][0:len(cmds[1])-1]
@@ -251,7 +252,7 @@ def ssh_cmd_func(server_num,result,p_cmd,ssh_conns,source_path,n):
     #     os.system( 'mkdir -p /Users/sam/ssh_data/'+server_info['name']+'/' )
     #     sftp.downs(scp_conns[ server_num ],data.paths[server_num] + '/' + cmds[1],'/Users/sam/ssh_data/'+server_info['name'])
 
-    elif( p_cmd[0:4] == 'down' ):
+    elif( p_cmd[0:5] == 'down ' ):
         cmds = cmd.split(' ')
         if cmds[1][len(cmds[1])-1] == '/':
             cmds[1] = cmds[1][0:len(cmds[1])-1]
@@ -304,6 +305,185 @@ def check_config_file():
         f=open(yaml_path,'w')  
         f.write(config.yaml_demo_content)
         f.close()
+
+def cmd_copy(p_cmd):
+    global server_list
+    copy_info = p_cmd.split( '>' )
+    data.client_file={}
+    add_file ={}
+    temp_master  =  copy_info[0].split(' ')
+
+    temp_master = list_del_empty( temp_master )
+
+    master_server = int( temp_master[1] )
+
+    master_info = data.servers[ master_server ]
+    
+    if  len(copy_info) > 1 :
+
+        client_server = copy_info[1].split(' ')
+        client_server = list_del_empty( client_server )
+
+    else:
+        client_server =list()
+        client_server.extend( server_list )
+        client_server.remove( master_server )
+    
+    file_name = temp_master[2]
+
+    if file_name[len(file_name)-1] == '/':
+        file_name = file_name[0:len(file_name)-1]
+    fileName = file_name.split('/')
+    os.system( 'mkdir -p "'+source_path+master_info['name']+'/"' )
+    global tar_name
+    tar_name = False
+
+    print ('\33[34m%d:\33[31m%s(%s)\33[0m  下载中' %(master_server,master_info['name'],common.hideipFun(master_info['host']) ) )
+    rs = check_down(
+        master_server,
+        data.paths[master_server] + '/' + file_name,
+        source_path+master_info['name']+'/' ,
+        fileName[ len(fileName)-1],data.paths[master_server] )
+    if rs == 'n':
+        print 'error'
+        return
+    n = 0
+    for server_num in client_server:
+        server_num = int(server_num)
+        server_info = data.servers[ server_num ]
+        print( '\33[34m%d:\33[31m%s@%s(%s)\33[0m 上传中' %(
+                server_num,server_info['user'],
+                server_info['name'],
+                common.hideipFun(server_info['host']) ))
+        if tar_name:
+            print source_path+master_info['name']+'/'+tar_name
+            check_up(server_num, data.scp_conns[ server_num ],source_path+master_info['name']+'/'+tar_name,data.paths[server_num]+'/', tar_name ,data.paths[server_num],n)
+
+            cmd = 'tar -xvf %s' %tar_name
+            print( cmd )
+            ssh.cmd(server_num,'cd '+data.paths[server_num]+' && '+ cmd)
+
+            cmd= 'rm %s' %tar_name 
+            print( cmd )
+            ssh.cmd(server_num,'cd '+data.paths[server_num]+' && '+ cmd)
+        else:
+            check_up(server_num, data.scp_conns[ server_num ],source_path+master_info['name']+'/'+file_name,data.paths[server_num]+'/', fileName[ len(fileName)-1] ,data.paths[server_num],n)
+
+
+def cmd_sync(p_cmd):
+    global server_list
+    sync_info = p_cmd.split( '>' )
+    data.client_file={}
+    add_file ={}
+    temp_master  =  sync_info[0].split(' ')
+    temp_master = list_del_empty( temp_master )
+
+    master_server = int( temp_master[1] )
+    if  len(sync_info) > 1 :
+
+        client_server = sync_info[1].split(' ')
+        client_server = list_del_empty( client_server )
+
+    else:
+        client_server =list()
+        client_server.extend( server_list )
+        client_server.remove( master_server )
+    
+    master_file = ssh.show_remote_file(
+        master_server,
+        data.paths[ master_server ])
+    master_remote_path = data.paths[master_server]
+    if not master_file:
+        print('  没有需要同步的文件')
+        return
+    
+    scan_documents = []
+    for server_num in client_server:
+        server_num = int(server_num)
+        scan_documents.append( threading.Thread(target=threads_func.scan_document,args=('scan_document',server_num)) )
+    threads_func.threads_handle(scan_documents)
+
+    is_all_sync_file = False
+    for server_num in client_server:
+        server_num = int(server_num)
+        server_info = data.servers[ server_num ]
+        print( '\33[34m%d:\33[31m%s(%s)\33[0m' %(
+            server_num,server_info['name'],
+            common.hideipFun(server_info['host']) ))
+
+        add_file[ server_num ] =list()
+        is_sync_file= False
+        
+        for file_name in master_file:
+            if( data.client_file[server_num].has_key(file_name)):
+                if( master_file[ file_name ] > data.client_file[ server_num ][ file_name ]):
+
+                    x = time.localtime( master_file[ file_name ] )
+                    mtime = time.strftime('%Y-%m-%d %H:%M:%S',x)
+                    print( "  更新: %s 修改时间:%s" %( file_name, mtime) )
+                    add_file[ server_num ].append(file_name) 
+                    is_all_sync_file =True
+                    is_sync_file = True
+            else:
+                x = time.localtime( master_file[ file_name ] )
+                mtime = time.strftime('%Y-%m-%d %H:%M:%S',x)
+
+                print( "  添加: %s 修改时间:%s"%( file_name,  mtime) )
+                add_file[ server_num ].append(file_name) 
+                is_all_sync_file =True
+                is_sync_file = True
+        if( not is_sync_file ):
+            print('  没有需要同步的文件')
+
+    if( not is_all_sync_file ):
+        return
+    certain = raw_input('确定要同步吗?(y/n):')
+    if( certain !='y'):
+        return
+    else:
+        files_list =list()
+        for server_num in add_file:
+
+            client_remote_path = data.paths[server_num]
+
+            server_info = data.servers[ master_server ]
+            files_list.extend(add_file[ server_num ])
+
+        files_list = list( set(files_list) )
+        print( '\33[34m%d:\33[31m%s@%s(%s)\33[0m 下载中' %(
+            master_server,server_info['user'],
+            server_info['name'],
+            common.hideipFun(server_info['host']) ))
+
+        for file_name in files_list:
+            os.system('mkdir -p "'+ source_path+data.servers[master_server]['name']+'-SYNC/' +file_name[0:file_name.rindex('/')] + '/"')
+            
+            print(' ' + file_name[file_name.index('/')+1:])
+            sftp.down(
+                master_server,
+                master_remote_path +'/'+file_name[file_name.index('/')+1:],
+                source_path+data.servers[master_server]['name']+'-SYNC/'+file_name )
+
+        for server_num in add_file:
+            server_info = data.servers[ server_num ]
+            print( '\33[34m%d:\33[31m%s@%s(%s)\33[0m 上传中' %(
+                server_num,server_info['user'],
+                server_info['name'],
+                common.hideipFun(server_info['host']) ))
+
+            for file_name in add_file[server_num]:
+                if(file_name.count('/') > 1):
+                    try:
+                        cmd = 'mkdir -p "' + client_remote_path + file_name[ file_name.index('/'):file_name.rindex('/')] + '/"'
+                        ssh.cmd(server_num, cmd)
+
+                    except Exception,e:
+                        pass
+                print(' ' + file_name[file_name.index('/')+1:])
+                sftp.upload(
+                    server_num,
+                    source_path+data.servers[master_server]['name']+'-SYNC/'+file_name,
+                    client_remote_path +'/'+file_name[file_name.index('/')+1:] )
 
 
 def main():
@@ -570,183 +750,10 @@ def main():
                             if( certain !='y'):
                                 continue
                         if( p_cmd[0:5] == 'copy '):
-                            copy_info = p_cmd.split( '>' )
-                            data.client_file={}
-                            add_file ={}
-                            temp_master  =  copy_info[0].split(' ')
-
-                            temp_master = list_del_empty( temp_master )
-
-                            master_server = int( temp_master[1] )
-
-                            master_info = data.servers[ master_server ]
-                            
-                            if  len(copy_info) > 1 :
-
-                                client_server = copy_info[1].split(' ')
-                                client_server = list_del_empty( client_server )
-
-                            else:
-                                client_server =list()
-                                client_server.extend( server_list )
-                                client_server.remove( master_server )
-                            
-                            file_name = temp_master[2]
-
-                            if file_name[len(file_name)-1] == '/':
-                                file_name = file_name[0:len(file_name)-1]
-                            fileName = file_name.split('/')
-                            os.system( 'mkdir -p "'+source_path+master_info['name']+'/"' )
-                            global tar_name
-                            tar_name = False
-
-                            print ('\33[34m%d:\33[31m%s(%s)\33[0m  下载中' %(master_server,master_info['name'],common.hideipFun(master_info['host']) ) )
-                            rs = check_down(
-                                master_server,
-                                data.paths[master_server] + '/' + file_name,
-                                source_path+master_info['name']+'/' ,
-                                fileName[ len(fileName)-1],data.paths[master_server] )
-                            if rs == 'n':
-                                print 'error'
-                                continue
-                            n = 0
-                            for server_num in client_server:
-                                server_num = int(server_num)
-                                server_info = data.servers[ server_num ]
-                                print( '\33[34m%d:\33[31m%s@%s(%s)\33[0m 上传中' %(
-                                        server_num,server_info['user'],
-                                        server_info['name'],
-                                        common.hideipFun(server_info['host']) ))
-                                if tar_name:
-                                    print source_path+master_info['name']+'/'+tar_name
-                                    check_up(server_num, data.scp_conns[ server_num ],source_path+master_info['name']+'/'+tar_name,data.paths[server_num]+'/', tar_name ,data.paths[server_num],n)
-
-                                    cmd = 'tar -xvf %s' %tar_name
-                                    print( cmd )
-                                    ssh.cmd(server_num,'cd '+data.paths[server_num]+' && '+ cmd)
-
-                                    cmd= 'rm %s' %tar_name 
-                                    print( cmd )
-                                    ssh.cmd(server_num,'cd '+data.paths[server_num]+' && '+ cmd)
-                                else:
-                                    check_up(server_num, data.scp_conns[ server_num ],source_path+master_info['name']+'/'+file_name,data.paths[server_num]+'/', fileName[ len(fileName)-1] ,data.paths[server_num],n)
-
+                            cmd_copy(p_cmd)
                             continue
                         if(p_cmd[0:5] =='sync '):
-                            sync_info = p_cmd.split( '>' )
-                            data.client_file={}
-                            add_file ={}
-                            temp_master  =  sync_info[0].split(' ')
-                            temp_master = list_del_empty( temp_master )
-
-                            master_server = int( temp_master[1] )
-                            if  len(sync_info) > 1 :
-
-                                client_server = sync_info[1].split(' ')
-                                client_server = list_del_empty( client_server )
-
-                            else:
-                                client_server =list()
-                                client_server.extend( server_list )
-                                client_server.remove( master_server )
-
-                            master_file = ssh.show_remote_file(
-                                master_server,
-                                data.paths[ master_server ])
-                            master_remote_path = data.paths[master_server]
-                            if not master_file:
-                                print('  没有需要同步的文件')
-                                continue
-                            
-                            scan_documents = []
-                            for server_num in client_server:
-                                server_num = int(server_num)
-                                scan_documents.append( threading.Thread(target=threads_func.scan_document,args=('scan_document',server_num)) )
-                            threads_func.threads_handle(scan_documents)
-
-                            is_all_sync_file = False
-                            for server_num in client_server:
-                                server_num = int(server_num)
-                                server_info = data.servers[ server_num ]
-                                print( '\33[34m%d:\33[31m%s(%s)\33[0m' %(
-                                    server_num,server_info['name'],
-                                    common.hideipFun(server_info['host']) ))
-
-                                add_file[ server_num ] =list()
-                                is_sync_file= False
-                                
-                                for file_name in master_file:
-                                    if( data.client_file[server_num].has_key(file_name)):
-                                        if( master_file[ file_name ] > data.client_file[ server_num ][ file_name ]):
-
-                                            x = time.localtime( master_file[ file_name ] )
-                                            mtime = time.strftime('%Y-%m-%d %H:%M:%S',x)
-                                            print( "  更新: %s 修改时间:%s" %( file_name, mtime) )
-                                            add_file[ server_num ].append(file_name) 
-                                            is_all_sync_file =True
-                                            is_sync_file = True
-                                    else:
-                                        x = time.localtime( master_file[ file_name ] )
-                                        mtime = time.strftime('%Y-%m-%d %H:%M:%S',x)
-
-                                        print( "  添加: %s 修改时间:%s"%( file_name,  mtime) )
-                                        add_file[ server_num ].append(file_name) 
-                                        is_all_sync_file =True
-                                        is_sync_file = True
-                                if( not is_sync_file ):
-                                    print('  没有需要同步的文件')
-
-                            if( not is_all_sync_file ):
-                                continue
-                            certain = raw_input('确定要同步吗?(y/n):')
-                            if( certain !='y'):
-                                continue
-                            else:
-                                files_list =list()
-                                for server_num in add_file:
-
-                                    client_remote_path = data.paths[server_num]
-
-                                    server_info = data.servers[ master_server ]
-                                    files_list.extend(add_file[ server_num ])
-
-                                files_list = list( set(files_list) )
-                                print( '\33[34m%d:\33[31m%s@%s(%s)\33[0m 下载中' %(
-                                    master_server,server_info['user'],
-                                    server_info['name'],
-                                    common.hideipFun(server_info['host']) ))
-
-                                for file_name in files_list:
-                                    os.system('mkdir -p "'+ source_path+data.servers[master_server]['name']+'-SYNC/' +file_name[0:file_name.rindex('/')] + '/"')
-                                    
-                                    print(' ' + file_name[file_name.index('/')+1:])
-                                    sftp.down(
-                                        master_server,
-                                        master_remote_path +'/'+file_name[file_name.index('/')+1:],
-                                        source_path+data.servers[master_server]['name']+'-SYNC/'+file_name )
-
-                                for server_num in add_file:
-                                    server_info = data.servers[ server_num ]
-                                    print( '\33[34m%d:\33[31m%s@%s(%s)\33[0m 上传中' %(
-                                        server_num,server_info['user'],
-                                        server_info['name'],
-                                        common.hideipFun(server_info['host']) ))
-
-                                    for file_name in add_file[server_num]:
-                                        if(file_name.count('/') > 1):
-                                            try:
-                                                cmd = 'mkdir -p "' + client_remote_path + file_name[ file_name.index('/'):file_name.rindex('/')] + '/"'
-                                                ssh.cmd(server_num, cmd)
-
-                                            except Exception,e:
-                                                pass
-                                        print(' ' + file_name[file_name.index('/')+1:])
-                                        sftp.upload(
-                                            server_num,
-                                            source_path+data.servers[master_server]['name']+'-SYNC/'+file_name,
-                                            client_remote_path +'/'+file_name[file_name.index('/')+1:] )
-
-
+                            cmd_sync(p_cmd)
                             continue
 
                         if(p_cmd[0:7] =='script '):
@@ -766,7 +773,12 @@ def main():
                                     n = 0
                                     server_num_arr = regex_cmd.match(p_cmd)
 
-
+                                    if( p_cmd[0:5] == 'copy '):
+                                        cmd_copy(p_cmd)
+                                        continue
+                                    if(p_cmd[0:5] =='sync '):
+                                        cmd_sync(p_cmd)
+                                        continue
                                     if(server_num_arr):
                                         if( not data.paths.has_key( int( server_num_arr.group(1) ) ) ):
                                             script_err ='notpath'
