@@ -757,11 +757,15 @@ def main():
                             continue
 
                         if(p_cmd[0:7] =='script '):
+                            p_cmd = p_cmd.split(' ')
+
+                            if( not os.path.isfile(source_path+'script/'+p_cmd[1]) ):
+                                print('脚本不存在！')
+                                continue
                             certain = raw_input( '确定要执行脚本命令吗?(y/n):' )
                             if( certain !='y'):
                                 continue
                             else:
-                                p_cmd = p_cmd.split(' ')
                                 scripts = open( source_path+'script/'+p_cmd[1] ,"r")
                                 script_err =''
                                 for script in scripts.readlines():
