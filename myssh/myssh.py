@@ -495,6 +495,9 @@ def main():
     
     if len(sys.argv) > 1:
         for operate in sys.argv[1:]:
+            if operate == '-v':
+                print('0.3.1')
+                return
             if operate  == 'hideip':
                 data.hideip = True
 
@@ -579,7 +582,7 @@ def main():
     \33[33mcmd\33[0m    服务器编号[...] 如 cmd 1 2 3 ,可操作多台服务器
     \33[33mcmd -l\33[0m 服务器编号  操作与服务器有关联的多台服务器 关联规则 服务器名-数字
     \33[33mcmd -g\33[0m 服务器编号  操作分组中的多台服务器,需要配置分组code
-        \33[33mup\33[0m     上传文件 如 up 本地文件名 (上传"~/myssh_file/up/"目录下的文件)
+        \33[33mup\33[0m     上传文件 如 up 本地文件名 (上传"~/myssh_files/up/"目录下的文件)
         \33[33mdown\33[0m   下载文件 如 down 服务器文件名 本地文件名(可选)
         \33[33msync\33[0m   同步文件 "sync 服务器id > 被同步的服务器id(多个使用空格分隔)",如 sync 1 > 2 3
         \33[33mcopy\33[0m   复制文件 "copy 服务器id 文件名> 被同步的服务器id(多个使用空格分隔)",如 copy 1 1.txt > 2 3
@@ -762,12 +765,19 @@ def main():
                             if( not os.path.isfile(source_path+'script/'+p_cmd[1]) ):
                                 print('脚本不存在！')
                                 continue
+                            print("\33[31m")
+                            
+                            scripts = open( source_path+'script/'+p_cmd[1] ,"r")
+                            for script in scripts.readlines():
+                                print(script)
+                            print("\33[0m")
+
                             certain = raw_input( '确定要执行脚本命令吗?(y/n):' )
                             if( certain !='y'):
                                 continue
                             else:
-                                scripts = open( source_path+'script/'+p_cmd[1] ,"r")
                                 script_err =''
+                                scripts = open( source_path+'script/'+p_cmd[1] ,"r")
                                 for script in scripts.readlines():
                                     p_cmd = script.strip('\n')
                                     if( p_cmd[0:1] =='#' ):

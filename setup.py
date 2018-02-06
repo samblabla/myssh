@@ -7,7 +7,7 @@ with open('requirements.txt') as f:
     required_packages = f.readlines()
 
 setup(name='myssh',
-    version='0.3.0',
+    version='0.3.1',
     scripts=['script/myssh'],
     packages=['myssh'],
     author = "sam",  
