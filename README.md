@@ -24,7 +24,7 @@ make &&make install
 ```
 
 ### 服务器配置
-编辑服务器配置文件（文件在 ~/.ssh/myssh.yml）
+编辑服务器配置文件（文件在 ~/.myssh/myssh.yml）
 
 ```
 myssh edit
