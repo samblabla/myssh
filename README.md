@@ -36,3 +36,5 @@ myssh edit
 在~/.bash_profile中添加 export PYTHONIOENCODING=UTF-8
 
 
+### License
+Apache License Version 2.0 see http://www.apache.org/licenses/LICENSE-2.0.html
