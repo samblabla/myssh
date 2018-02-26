@@ -12,7 +12,7 @@ import pexpect
 def ssh_verify(name, i):
 
     server_info = data.servers[i]
-    if(server_info.has_key('port')):
+    if('port' in server_info):
         port = server_info['port']
     else:
         port = 22
@@ -34,27 +34,27 @@ def ssh_verify(name, i):
         if status == 0 :
             ssh.sendline(server_info['password'])
             ssh.sendline(cmd)
-            print msg+' \033[32mSuccess\033[0m'
+            print(msg+' \033[32mSuccess\033[0m')
         elif status == 1:
             ssh.sendline('yes\n')
             ssh.expect('password: ')
             ssh.sendline(server_info['password'])
             ssh.sendline(cmd)
-            print msg+' \033[32mAdd public key successfully\033[0m'
+            print(msg+' \033[32mAdd public key successfully\033[0m')
         ssh.close()
         return
     except pexpect.EOF:
-        print msg+' \033[31mEOF\033[0m'
+        print(msg+' \033[31mEOF\033[0m')
         ssh.close()
     except pexpect.TIMEOUT:
-        print msg+' \033[31mTimeout\033[0m'
+        print(msg+' \033[31mTimeout\033[0m')
         ssh.close()
     
 
 def threads_connect(name,i):
     ssh.create_conn(i)
     sftp.create_conn(i)
-    print '\33[34m%d:\33[31m%s成功：%s(%s) \33[0m' %(i,name,data.servers[i]['name'],common.hideipFun(data.servers[i]['host']))
+    print('\33[34m%d:\33[31m%s成功：%s(%s) \33[0m' %(i,name,data.servers[i]['name'],common.hideipFun(data.servers[i]['host'])))
 
 def threads_handle(threads):
     for t in threads:
@@ -78,8 +78,8 @@ def heartbeat_ssh(ssh_conns,close_i):
         try:
             for i in ssh_conns:
                 ssh_conns[i].exec_command('pwd')
-        except Exception,e:
-            print '\n'
+        except (ExceptionType) as e:
+            print('\n')
 
             reconnect_threads = []
             for server_num in ssh_conns:
@@ -106,11 +106,11 @@ def heartbeat_scp(scp_conns,close_i):
             break
         try:
             for i in scp_conns:
-                if data.scp_isusing.has_key(i) and data.scp_isusing[i] == True :
+                if i in data.scp_isusing and data.scp_isusing[i] == True :
                     continue
                 scp_conns[i].listdir_attr('/')
-        except Exception,e:
-            print '\n'
+        except (ExceptionType) as e:
+            print('\n')
             reconnect_threads = []
             for server_num in scp_conns:
                 if data.heartbeat_paramiko_close[close_i]:

@@ -17,18 +17,18 @@ def cmd(server_num,cmd_str):
     ssh = data.ssh_conns[server_num]
     try:
         stdin, stdout, stderr = ssh.exec_command(cmd_str)
-    except Exception, e:
-        print '发生错误,尝试重连...'
+    except (ExceptionType) as e:
+        print('发生错误,尝试重连...')
         create_conn(server_num)
 
         return cmd(server_num,cmd_str)
-    return stdout.read()[0:-1]
+    return stdout.read()[0:-1].decode()
 
 def cmd_cache(server_num,cmd_str):
-    if not data.cmd_cache.has_key( server_num ):
+    if not server_num in data.cmd_cache:
         data.cmd_cache[server_num] = {}
     
-    if( not data.cmd_cache[server_num].has_key(cmd_str) ):
+    if( not cmd_str in data.cmd_cache[server_num] ):
         result = cmd(server_num,cmd_str)
         data.cmd_cache[server_num] = {cmd_str: result}
     return data.cmd_cache[server_num][ cmd_str ]
@@ -45,7 +45,7 @@ def cd(server_num,cmd_str):
 
 
 def create_conn(server_num):
-    if(data.servers[server_num].has_key('port')):
+    if('port' in data.servers[server_num]):
         port = data.servers[server_num]['port']
     else:
         port = 22

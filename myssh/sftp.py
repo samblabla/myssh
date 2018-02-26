@@ -21,16 +21,16 @@ def upload(server_num,localFile,remoteFile):
     sftp = data.scp_conns[ server_num ]
     data.scp_isusing[server_num] = True
     if not os.path.exists(localFile):
-        print '本地文件不存在'
+        print( '本地文件不存在' )
         return
     try:
         result=sftp.put(localFile,remoteFile,printTotals)
-        print ''
-    except Exception, e:
+        print('')
+    except (ExceptionType) as e:
         if str(e)[-12:] == 'No such file':
             return
-        print str(e)
-        print '发生错误,尝试重连...'
+        print(str(e))
+        print('发生错误,尝试重连...')
 
         create_conn(server_num)
 
@@ -45,11 +45,11 @@ def down(server_num,remoteFile,localFile):
     try:
         result=sftp.get(remoteFile,localFile, printTotals )
         print('')
-    except Exception, e:
+    except (ExceptionType) as e:
         if str(e)[-12:] == 'No such file':
             return
-        print e
-        print '发生错误,尝试重连...'
+        print(e)
+        print('发生错误,尝试重连...')
 
         create_conn(server_num)
         
@@ -87,11 +87,11 @@ def downs(server_num,remotePath,localPath):
                 try:
                     sftp.get(os.path.join(walker[0],file),os.path.join(localPath,walker[0],file), printTotals)
                     print('')
-                except Exception,e:
-                    print e
-    except Exception,e:
-        print e
-        print '发生错误,尝试重连...'
+                except (ExceptionType) as e:
+                    print(e)
+    except (ExceptionType) as e:
+        print(e)
+        print('发生错误,尝试重连...')
 
         create_conn(server_num)
 
@@ -117,9 +117,9 @@ def sftp_walk(sftp,remotePath):
             new_path=os.path.join(remotePath,folder)  
             for x in sftp_walk(sftp,new_path):  
                 yield x  
-    except Exception, e:
-        print e
-        # print '发生错误'
+    except (ExceptionType) as e:
+        print(e)
+        # print('发生错误')
 
 
 def up_files( sftp,localPath,remotePath ):
@@ -134,12 +134,12 @@ def up_files( sftp,localPath,remotePath ):
             if( file != '.DS_Store' ):
                 print(  os.path.join(remotePath,walker[0],file )  )
                 sftp.put(os.path.join(walker[0],file),os.path.join(remotePath,walker[0],file),printTotals)  
-                print ''
+                print('')
 
 
 
 def create_conn(server_num):
-    if(data.servers[server_num].has_key('port')):
+    if('port' in data.servers[server_num]):
         port = data.servers[server_num]['port']
     else:
         port = 22
