@@ -9,11 +9,16 @@ import time
 import yaml
 import re
 
-import tab
 import platform
 
 import threading
 
+for path in sys.path:
+    if re.search('\/myssh.+?.egg', path) :
+        sys.path.append(path+'/myssh')
+        break
+
+import tab
 import config
 
 import data
@@ -37,8 +42,8 @@ if int(platform.python_version()[0:1]) < 3: #python2
     reload(sys)
     sys.setdefaultencoding( "utf-8" )
 else:
-    def raw_input(data):
-        return str(input(data))
+    def raw_input(input_data):
+        return str(input(input_data))
 COMMANDS = ['cmd ','quit','help']
 def complete(text, state):
     for cmd in COMMANDS:
@@ -282,22 +287,6 @@ def ssh_cmd_func(server_num,result,p_cmd,ssh_conns,source_path,n):
         print( cmds[ n ] )
 
 
-def get_local_pubsshs():
-    known_hosts_path = os.path.expanduser('~')+"/.ssh/known_hosts"
-    local_pubsshs = []
-    if os.path.exists(known_hosts_path):
-        f_pubssh = open( known_hosts_path,"r")
-        for line in f_pubssh.readlines():
-            new_line = line.split(' ')[0];
-
-            if( len( new_line.split(',') ) > 1 ):
-                for x_ip in new_line.split(','):
-                     local_pubsshs.append(  x_ip  )
-            else:
-                local_pubsshs.append(  new_line  )
-        f_pubssh.close()
-    return local_pubsshs
-
 def check_config_file():
     if os.path.isdir( os.path.expanduser('~')+'/.myssh' ):
         pass
@@ -500,7 +489,10 @@ def main():
     if len(sys.argv) > 1:
         for operate in sys.argv[1:]:
             if operate == '-v':
-                print('0.3.1')
+                print(config.version)
+                return
+            if operate == 'version':
+                print(config.version)
                 return
             if operate  == 'hideip':
                 data.hideip = True
@@ -937,14 +929,14 @@ def main():
                     else:
                         port = '22'
 
-
-                    local_pubsshs = get_local_pubsshs()
-                    if(
-                        server_info['host'] not in local_pubsshs 
-                        and
-                        '['+server_info['host']+']:'+str(port) not in local_pubsshs
-                    ):
-                        threads_func.ssh_verify('验证',server_num)
+                    known_host = os.popen("ssh-keygen -F %s" %server_info['host'])
+                    if(known_host.read() == ''):
+                        if( port != '22'):
+                            known_host = os.popen("ssh-keygen -F [%s]:%s" %(server_info['host'],str(port)) )
+                            if (known_host.read() == ''):
+                                threads_func.ssh_verify('验证',server_num)
+                        else:
+                            threads_func.ssh_verify('验证',server_num)
 
                     if( 'defaultPath' in server_info ):
 
