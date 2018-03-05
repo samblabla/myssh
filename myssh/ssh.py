@@ -17,7 +17,7 @@ def cmd(server_num,cmd_str):
     ssh = data.ssh_conns[server_num]
     try:
         stdin, stdout, stderr = ssh.exec_command(cmd_str)
-    except (ExceptionType) as e:
+    except (Exception) as e:
         print('发生错误,尝试重连...')
         create_conn(server_num)
 

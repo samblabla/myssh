@@ -136,7 +136,7 @@ def check_down( server_num,remotePath,localPath,fileName ,cmdPath):#检查下载
     scp = data.scp_conns[ server_num ]
     try:
         scp.listdir_attr(remotePath)
-    except (ExceptionType) as e:
+    except (Exception) as e:
         sftp.down(server_num,remotePath,localPath+fileName)
         return 'ok'
     try:
@@ -176,7 +176,7 @@ def check_down( server_num,remotePath,localPath,fileName ,cmdPath):#检查下载
                 return 'n'
         else:
             sftp.downs(server_num,remotePath,localPath)
-    except (ExceptionType) as e:
+    except (Exception) as e:
         print(e)
         return 'n'
     return 'ok'
@@ -470,7 +470,7 @@ def cmd_sync(p_cmd):
                         cmd = 'mkdir -p "' + client_remote_path + file_name[ file_name.index('/'):file_name.rindex('/')] + '/"'
                         ssh.cmd(server_num, cmd)
 
-                    except (ExceptionType) as e:
+                    except (Exception) as e:
                         pass
                 print(' ' + file_name[file_name.index('/')+1:])
                 sftp.upload(
@@ -620,8 +620,7 @@ def main():
                         server_list = group_code_list[ server_nums[2] ]
                     else:
                         server_list = server_nums[1:]
-                        server_list = map(eval, server_list)
-
+                        server_list = list(map(eval, server_list))
                     server_info = data.servers[ int( server_list[0] ) ]
                     server_len =len( server_list )
 

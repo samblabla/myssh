@@ -78,7 +78,7 @@ def heartbeat_ssh(ssh_conns,close_i):
         try:
             for i in ssh_conns:
                 ssh_conns[i].exec_command('pwd')
-        except (ExceptionType) as e:
+        except (Exception) as e:
             print('\n')
 
             reconnect_threads = []
@@ -109,7 +109,7 @@ def heartbeat_scp(scp_conns,close_i):
                 if i in data.scp_isusing and data.scp_isusing[i] == True :
                     continue
                 scp_conns[i].listdir_attr('/')
-        except (ExceptionType) as e:
+        except (Exception) as e:
             print('\n')
             reconnect_threads = []
             for server_num in scp_conns:

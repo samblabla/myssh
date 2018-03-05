@@ -26,7 +26,7 @@ def upload(server_num,localFile,remoteFile):
     try:
         result=sftp.put(localFile,remoteFile,printTotals)
         print('')
-    except (ExceptionType) as e:
+    except (Exception) as e:
         if str(e)[-12:] == 'No such file':
             return
         print(str(e))
@@ -45,7 +45,7 @@ def down(server_num,remoteFile,localFile):
     try:
         result=sftp.get(remoteFile,localFile, printTotals )
         print('')
-    except (ExceptionType) as e:
+    except (Exception) as e:
         if str(e)[-12:] == 'No such file':
             return
         print(e)
@@ -87,9 +87,9 @@ def downs(server_num,remotePath,localPath):
                 try:
                     sftp.get(os.path.join(walker[0],file),os.path.join(localPath,walker[0],file), printTotals)
                     print('')
-                except (ExceptionType) as e:
+                except (Exception) as e:
                     print(e)
-    except (ExceptionType) as e:
+    except (Exception) as e:
         print(e)
         print('发生错误,尝试重连...')
 
@@ -117,7 +117,7 @@ def sftp_walk(sftp,remotePath):
             new_path=os.path.join(remotePath,folder)  
             for x in sftp_walk(sftp,new_path):  
                 yield x  
-    except (ExceptionType) as e:
+    except (Exception) as e:
         print(e)
         # print('发生错误')
 
