@@ -63,10 +63,7 @@ function getdir(){
     for t_element in `ls $1 --full-time|awk '{if(NR!=1) print}'|awk '{print $9"❂"$6"."$7}'`
     do 
         local element=$t_element
-            OLD_IFS="$IFS" 
-        IFS="❂" #shell分隔符只能用一位的
-        local arr=($element) 
-            IFS="$OLD_IFS"
+        local arr=(${element//❂/ })
         dir_or_file=$1"/"${arr[0]}
         if [ -d $dir_or_file ]
             then 
