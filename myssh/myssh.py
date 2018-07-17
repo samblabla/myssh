@@ -1006,7 +1006,7 @@ def login_ssh(server_info):
         if( 'defaultPath' in server_info ):
             login_command = login_command+"'cd %s;bash;'" %(server_info['defaultPath'])
         else:
-            login_command = login_command+"'bash;'" %(server_info['defaultPath'])
+            login_command = login_command+"'bash;'"
         os.system(
             '''%s -p '%s' ssh %s@%s -p %s -t '\
             echo "\033[33m ";\
