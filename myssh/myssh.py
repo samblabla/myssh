@@ -27,6 +27,8 @@ import sftp
 import common
 import threads_func
 
+import urlparse
+
 symtem_name = platform.system()
 
 sshpass = config.sshpass
@@ -36,7 +38,6 @@ yaml_path = config.yaml_path
 regex = re.compile(r'([\s\S]+?)-\d+$')#正则匹配 名字 关联批量操作
 regex_cmd = re.compile(r'^(\d+):([\w\W]+)')#多台服务器操作时 判断是否只操作一台
 
-ssh_login_cmd = re.compile(r'^(\d+) ([\w\W]{2,})')#多台服务器操作时 判断是否只操作一台
 
 if int(platform.python_version()[0:1]) < 3: #python2
     reload(sys)
@@ -186,15 +187,15 @@ def check_down( server_num,remotePath,localPath,fileName ,cmdPath):#检查下载
 def relation_add( l ,i ,sign):
     global relation 
     result_str =''
-    
+    expansion_key ='[[expansion:%d]]' %i
     if( regex.match( l['name'] ) != None ):
         relation_key = regex.match( l['name'] ).group(1)
 
         if( len(sys.argv) >1 and sys.argv[1] == 'all' ):
-            result_str = sign+'\33[41m%s\33[0m:%s(%s)\n' %(i, l['name'],common.hideipFun(l['host']) )
+            result_str = sign+'\33[41m%s\33[0m:%s(%s) %s\n' %(i, l['name'],common.hideipFun(l['host']) ,expansion_key)
         else:
             if( not relation_key in relation ):
-                result_str = sign+'\33[41m%s\33[0m:%s(%s) <<%s>>\n' %(i, l['name'],common.hideipFun(l['host']) ,relation_key )
+                result_str = sign+'\33[41m%s\33[0m:%s(%s) %s<<%s>>\n' %(i, l['name'],common.hideipFun(l['host']) ,expansion_key,relation_key)
         
         if( not relation_key in relation ):
 
@@ -206,7 +207,7 @@ def relation_add( l ,i ,sign):
 
         return result_str
     else:
-        return sign+'%s:%s(%s)\n' %(i, l['name'],common.hideipFun(l['host'])) 
+        return sign+'%s:%s(%s) %s\n' %(i, l['name'],common.hideipFun(l['host']),expansion_key) 
 
 def is_number(s):
     try:
@@ -530,6 +531,7 @@ def main():
             i = 0
             
             for v in temp_result:
+
                 if( 'group' in v ):  #分组
                     if('code' in v):
                         show_str += '\33[42m\33[30m  %s [%s] \33[0m\n' % ( v['name'] ,v['code'] ) 
@@ -553,8 +555,57 @@ def main():
                     result.append( v )
                     show_str += relation_add(v,i,'\33[40m \33[0m ')
                     i+=1
+            x_i=0
+            for x in result:
+
+                if not 'port' in x:
+                    result[x_i]['port'] = '22'
+
+                expansion_key = '[[expansion:%d]]' %x_i
+
+                if('springboard' in x ):
+                    s_i =0
+                    springboard_status = False
+                    for s in result:
+                        if s["host"] == x['springboard']:
+                            springboard_status = True
+                            show_str = show_str.replace( expansion_key,'\33[41m 跳板机 \33[0m\33[45m '+str(s_i)+' \33[0m'+ expansion_key)
+                            result[x_i]['springboard_info'] = s
+                            break
+                        s_i+=1
+                    if(springboard_status == False):
+                        show_str = show_str.replace( expansion_key,'\33[41m 跳板机不存在 \33[0m \33[0m'+ expansion_key)
+
+
+                x_i+=1
+                show_str = show_str.replace( expansion_key,  '')
 
             data.servers = result
+
+            if( len(sys.argv) >2 and  sys.argv[1] == "connect" ):
+                parsed_tuple = urlparse.urlparse(sys.argv[2])
+                if(parsed_tuple.scheme=='ssh'):
+                    server_info = {}
+
+                    temp = parsed_tuple.netloc.split('@')
+
+                    temp2 = temp[0].split(':')
+                    server_info["user"]= temp2[0]
+                    server_info["password"]= temp2[1]
+                    server_info["path"]=parsed_tuple.path
+
+                    temp3 = temp[1].split(':')
+                    server_info["host"]= temp3[0]
+                                        
+                    if(len(temp3)>1):
+                        server_info["port"]= temp3[1]
+                    else:
+                        server_info["port"]= 22
+                    if parsed_tuple.path:
+                        server_info["defaultPath"]= parsed_tuple.path
+
+                    login_ssh(server_info)
+                exit()
             if( len(sys.argv) >1 and  sys.argv[1] == "verify" ):
                 n = 0
                 verify_threads = []
@@ -566,8 +617,8 @@ def main():
                 exit()
 
             for x in relation:
-                
                 show_str = show_str.replace( '<<%s>>' %x, '    \33[41m ' + str( len( relation[x] ) ) + '台 \33[0m\33[45m %s \33[0m' %' | '.join(str(i) for i in relation[x])  )
+
             server = ''
             while(1):
                 readline.set_completer(complete)
@@ -614,7 +665,7 @@ def main():
                     data.paths={}
 
                     if( server.find('cmd -l') != -1 ):
-                        server_list = relation[   regex.match( result[ int( server_nums[2] ) ]['name'] ).group(1)  ]
+                        server_list = v[   regex.match( result[ int( server_nums[2] ) ]['name'] ).group(1)  ]
                         
                     elif( server.find('cmd -g') != -1 ):
                         server_list = group_code_list[ server_nums[2] ]
@@ -904,13 +955,11 @@ def main():
 
 
                 else:
-                    login_cmd = ''
                     if( not is_number( server ) ):
                         server_arr = ssh_login_cmd.match(server)
                         if( not server_arr ):
                             continue
                         server_num = int( server_arr.group(1) )
-                        login_cmd = server_arr.group(2)+';'
                     else:
                         server_num = int(server)
 
@@ -923,38 +972,54 @@ def main():
                     
                     if( 'description' in server_info ):
                         print( '\33[32m' + server_info['description'].replace('#',' \33[35m#').replace('\\n ','\33[32m\n') +'\33[0m\n' )
-                    if('port' in server_info):
-                        port = server_info['port']
-                    else:
-                        port = '22'
-
+    
                     known_host = os.popen("ssh-keygen -F %s" %server_info['host'])
                     if(known_host.read() == ''):
-                        if( port != '22'):
-                            known_host = os.popen("ssh-keygen -F [%s]:%s" %(server_info['host'],str(port)) )
-                            if (known_host.read() == ''):
+                        if(not 'springboard' in server_info):
+                            if( server_info['port'] != '22'):
+                                known_host = os.popen("ssh-keygen -F [%s]:%s" %(server_info['host'],str(server_info['port'])) )
+                                if (known_host.read() == ''):
+                                    threads_func.ssh_verify('验证',server_num)
+                            else:
                                 threads_func.ssh_verify('验证',server_num)
-                        else:
-                            threads_func.ssh_verify('验证',server_num)
+                    login_ssh(server_info)
+   
 
-                    if( 'defaultPath' in server_info ):
 
-                        os.system('''%s -p '%s' ssh %s@%s -p %s -t '\
-                            echo "\033[33m ";\
-                            date -R;echo '';\
-                            echo 内网IP:$(ifconfig |head -n 2|grep "inet addr"|cut -b 21-80);\
-                            echo 系统:$(head -n 1 /etc/issue) $(getconf LONG_BIT)位;\
-                            echo cpu:$(cat /proc/cpuinfo |grep "model name"| wc -l)核;\
-                            cat /proc/meminfo |grep 'MemTotal';echo 磁盘使用:;\
-                            df -hl;\
-                            echo "\033[0m";\
-                            ' ''' %( sshpass, server_info['password'], server_info['user'], server_info['host'] ,port) )
-                        
-                        os.system("%s -p '%s' ssh %s@%s -p %s -o ServerAliveInterval=60 -t  'cd %s;%sbash;'" %( sshpass, server_info['password'], server_info['user'], server_info['host'] ,port,server_info['defaultPath'] ,login_cmd) )
+def login_ssh(server_info):
 
-                    else:
+    if ("springboard_info" in server_info):
+    
+        springboard_info = server_info['springboard_info']
+    
+        login_command = "%s -p '%s' ssh %s@%s -p %s -o ServerAliveInterval=60 -t " %( sshpass, springboard_info['password'], springboard_info['user'], springboard_info['host'] ,springboard_info['port'] )
+    
+        if( 'defaultPath' in server_info ):
+            login_command = login_command + "\"myssh connect ssh://"+server_info['user']+":"+server_info['password']+"@"+server_info['host']+":"+server_info['port'] +server_info['defaultPath']+"\""
+        else:
+            login_command = login_command + "\"myssh connect ssh://"+server_info['user']+":"+server_info['password']+"@"+server_info['host']+":"+server_info['port']+"\""
 
-                        os.system("%s -p '%s' ssh %s@%s  -o ServerAliveInterval=60 -p %s" %( sshpass, server_info['password'], server_info['user'], server_info['host'] ,port) )
+        os.system(login_command)
+    else:
+        login_command = "%s -p '%s' ssh %s@%s -p %s -o ServerAliveInterval=60 -t " %( sshpass, server_info['password'], server_info['user'], server_info['host'] ,server_info['port'] )
 
+        if( 'defaultPath' in server_info ):
+            login_command = login_command+"'cd %s;bash;'" %(server_info['defaultPath'])
+        else:
+            login_command = login_command+"'bash;'" %(server_info['defaultPath'])
+        os.system(
+            '''%s -p '%s' ssh %s@%s -p %s -t '\
+            echo "\033[33m ";\
+            date -R;echo '';\
+            echo 内网IP:$(ifconfig |head -n 2|grep "inet addr"|cut -b 21-80);\
+            echo 系统:$(head -n 1 /etc/issue) $(getconf LONG_BIT)位;\
+            echo cpu:$(cat /proc/cpuinfo |grep "model name"| wc -l)核;\
+            cat /proc/meminfo |grep 'MemTotal';echo 磁盘使用:;\
+            df -hl;\
+            echo "\033[0m";\
+            ' ''' %( sshpass, server_info['password'], server_info['user'], server_info['host'] ,server_info['port']),
+        )
+        os.system(login_command)
+        
 if __name__ == '__main__':
     main()
