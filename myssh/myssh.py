@@ -570,6 +570,7 @@ def main():
                         if s["host"] == x['springboard']:
                             springboard_status = True
                             show_str = show_str.replace( expansion_key,'\33[41m 跳板机 \33[0m\33[45m '+str(s_i)+' \33[0m'+ expansion_key)
+                            s['id'] = s_i
                             result[x_i]['springboard_info'] = s
                             break
                         s_i+=1
@@ -607,13 +608,12 @@ def main():
                     
                     known_host = os.popen("ssh-keygen -F %s" %server_info['host'])
                     if(known_host.read() == ''):
-                        if(not 'springboard' in server_info):
-                            if( server_info['port'] != 22):
-                                known_host = os.popen("ssh-keygen -F [%s]:%s" %(server_info['host'],str(server_info['port'])) )
-                                if (known_host.read() == ''):
-                                    threads_func.ssh_verify_by_server(server_info,'验证',-1)
-                            else:
+                        if( server_info['port'] != 22):
+                            known_host = os.popen("ssh-keygen -F [%s]:%s" %(server_info['host'],str(server_info['port'])) )
+                            if (known_host.read() == ''):
                                 threads_func.ssh_verify_by_server(server_info,'验证',-1)
+                        else:
+                            threads_func.ssh_verify_by_server(server_info,'验证',-1)
                     
                     login_ssh(server_info)
                 exit()
@@ -773,6 +773,10 @@ def main():
 
                                 data.ssh_conns[ server_num ].close()
                                 data.scp_conns[ server_num ].close()
+                                if 'ssh:%s' %server_num in data.proxy_conns:
+                                    data.proxy_conns['ssh:%s' %server_num].stop()
+                                if 'scp:%s' %server_num in data.proxy_conns:
+                                    data.proxy_conns['scp:%s' %server_num].stop()
                             break
                         if(p_cmd == 'f5'):
                             reconnect_threads = []
@@ -986,7 +990,15 @@ def main():
     
                     known_host = os.popen("ssh-keygen -F %s" %server_info['host'])
                     if(known_host.read() == ''):
-                        if(not 'springboard' in server_info):
+                        if('springboard' in server_info):
+                            springboard_info = server_info['springboard_info']
+                            if( server_info['port'] != '22'):
+                                known_host = os.popen("ssh-keygen -F [%s]:%s" %(springboard_info['host'],str(springboard_info['port'])) )
+                                if (known_host.read() == ''):
+                                    threads_func.ssh_verify('验证',springboard_info['id'])
+                            else:
+                                threads_func.ssh_verify('验证',springboard_info.id)
+                        else:
                             if( server_info['port'] != '22'):
                                 known_host = os.popen("ssh-keygen -F [%s]:%s" %(server_info['host'],str(server_info['port'])) )
                                 if (known_host.read() == ''):

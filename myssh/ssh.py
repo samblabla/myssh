@@ -3,24 +3,28 @@ import paramiko
 
 import data
 import common
+from sshtunnel import SSHTunnelForwarder
+
+
 
 def login(host,user,pwd,port):
     #建立ssh连接
     ssh=paramiko.SSHClient()
     ssh.load_system_host_keys()
     ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+    
     ssh.connect(host,port=port,username=user,password=pwd,compress=True)
+    
     return ssh
 
 def cmd(server_num,cmd_str):
-
     ssh = data.ssh_conns[server_num]
     try:
         stdin, stdout, stderr = ssh.exec_command(cmd_str)
     except (Exception) as e:
-        print('发生错误,尝试重连...')
-        create_conn(server_num)
+        print('发生错误,尝试重连...',e)
 
+        create_conn(server_num)
         return cmd(server_num,cmd_str)
     return stdout.read()[0:-1].decode()
 
@@ -45,12 +49,36 @@ def cd(server_num,cmd_str):
 
 
 def create_conn(server_num):
-    data.ssh_conns[ server_num ] = login(
-        data.servers[server_num]['host'],
-        data.servers[server_num]['user'],
-        data.servers[server_num]['password'],
-        data.servers[server_num]['port']
+    proxy_name ='ssh:%s' %server_num
+
+    if 'springboard_info' in data.servers[server_num]:
+        if proxy_name in data.proxy_conns:
+            data.proxy_conns[proxy_name].stop()
+        springboard_info = data.servers[server_num]['springboard_info']
+        data.proxy_conns[proxy_name] = SSHTunnelForwarder(
+           (springboard_info['host'], springboard_info['port']),
+            ssh_username=springboard_info['user'],
+            ssh_password=springboard_info['password'],
+            remote_bind_address=(data.servers[server_num]['host'], data.servers[server_num]['port']),
         )
+        
+        data.proxy_conns[proxy_name].start()
+
+        data.ssh_conns[ server_num ] = login(
+            '127.0.0.1',
+            data.servers[server_num]['user'],
+            data.servers[server_num]['password'],
+            data.proxy_conns[proxy_name].local_bind_port
+            )
+    else:
+
+        data.ssh_conns[ server_num ] = login(
+            data.servers[server_num]['host'],
+            data.servers[server_num]['user'],
+            data.servers[server_num]['password'],
+            data.servers[server_num]['port']
+            )
+
 
 
 def show_remote_file(server_num,remotePath):

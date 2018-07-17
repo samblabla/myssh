@@ -6,6 +6,8 @@ ssh_conns={}
 
 scp_conns={}
 
+proxy_conns={}
+
 paths={}
 
 cmd_cache={}
