@@ -1006,9 +1006,9 @@ def login_ssh(server_info):
         login_command = "%s -p '%s' ssh %s@%s -p %s -o ServerAliveInterval=60 -t " %( sshpass, springboard_info['password'], springboard_info['user'], springboard_info['host'] ,springboard_info['port'] )
     
         if( 'defaultPath' in server_info ):
-            login_command = login_command + "\"myssh connect ssh://"+server_info['user']+":"+server_info['password']+"@"+server_info['host']+":"+server_info['port'] +server_info['defaultPath']+"\""
+            login_command = login_command + "\"myssh connect ssh://"+server_info['user']+":"+server_info['password']+"@"+server_info['host']+":"+str(server_info['port']) +server_info['defaultPath']+"\""
         else:
-            login_command = login_command + "\"myssh connect ssh://"+server_info['user']+":"+server_info['password']+"@"+server_info['host']+":"+server_info['port']+"\""
+            login_command = login_command + "\"myssh connect ssh://"+server_info['user']+":"+server_info['password']+"@"+server_info['host']+":"+str(server_info['port'])+"\""
 
         os.system(login_command)
     else:
