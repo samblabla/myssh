@@ -45,15 +45,11 @@ def cd(server_num,cmd_str):
 
 
 def create_conn(server_num):
-    if('port' in data.servers[server_num]):
-        port = data.servers[server_num]['port']
-    else:
-        port = 22
     data.ssh_conns[ server_num ] = login(
         data.servers[server_num]['host'],
         data.servers[server_num]['user'],
         data.servers[server_num]['password'],
-        port
+        data.servers[server_num]['port']
         )
 
 

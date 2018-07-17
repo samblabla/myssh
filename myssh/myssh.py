@@ -559,7 +559,7 @@ def main():
             for x in result:
 
                 if not 'port' in x:
-                    result[x_i]['port'] = '22'
+                    result[x_i]['port'] = 22
 
                 expansion_key = '[[expansion:%d]]' %x_i
 
@@ -593,6 +593,7 @@ def main():
                     server_info["user"]= temp2[0]
                     server_info["password"]= temp2[1]
                     server_info["path"]=parsed_tuple.path
+                    server_info["name"]="connect"
 
                     temp3 = temp[1].split(':')
                     server_info["host"]= temp3[0]
@@ -603,7 +604,17 @@ def main():
                         server_info["port"]= 22
                     if parsed_tuple.path:
                         server_info["defaultPath"]= parsed_tuple.path
-
+                    
+                    known_host = os.popen("ssh-keygen -F %s" %server_info['host'])
+                    if(known_host.read() == ''):
+                        if(not 'springboard' in server_info):
+                            if( server_info['port'] != 22):
+                                known_host = os.popen("ssh-keygen -F [%s]:%s" %(server_info['host'],str(server_info['port'])) )
+                                if (known_host.read() == ''):
+                                    threads_func.ssh_verify_by_server(server_info,'验证',-1)
+                            else:
+                                threads_func.ssh_verify_by_server(server_info,'验证',-1)
+                    
                     login_ssh(server_info)
                 exit()
             if( len(sys.argv) >1 and  sys.argv[1] == "verify" ):

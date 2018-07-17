@@ -12,15 +12,14 @@ import pexpect
 def ssh_verify(name, i):
 
     server_info = data.servers[i]
-    if('port' in server_info):
-        port = server_info['port']
-    else:
-        port = 22
+    ssh_verify_by_server(server_info,name,i)
+
+def ssh_verify_by_server(server_info,name,i):
     cmd = 'cd ;ls;'
     ssh = pexpect.spawn('ssh %s@%s  -p %s  "%s"' %(
         server_info['user'],
         server_info['host'],
-        port,
+        server_info['port'],
         cmd))
     msg = '\33[34m%d:\33[33m%s@%s(%s):\33[0m ' %(
         i,
@@ -49,7 +48,7 @@ def ssh_verify(name, i):
     except pexpect.TIMEOUT:
         print(msg+' \033[31mTimeout\033[0m')
         ssh.close()
-    
+
 
 def threads_connect(name,i):
     ssh.create_conn(i)
