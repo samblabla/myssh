@@ -5,7 +5,7 @@ import time
 def hideipFun(ip):
     if data.hideip:
         temp_ip = ip.split('.')
-        return temp_ip[0]+'.*.*.'+temp_ip[1]
+        return temp_ip[0]+'.*.*.'+temp_ip[3]
     else:
         return ip
 

@@ -479,7 +479,6 @@ def cmd_sync(p_cmd):
                     source_path+data.servers[master_server]['name']+'-SYNC/'+file_name,
                     client_remote_path +'/'+file_name[file_name.index('/')+1:] )
 
-
 def main():
     global relation
     global cmds
@@ -971,10 +970,7 @@ def main():
 
                 else:
                     if( not is_number( server ) ):
-                        server_arr = ssh_login_cmd.match(server)
-                        if( not server_arr ):
-                            continue
-                        server_num = int( server_arr.group(1) )
+                        continue
                     else:
                         server_num = int(server)
 

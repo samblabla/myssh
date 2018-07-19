@@ -1,6 +1,6 @@
 #coding:utf-8
 import os
-version = '0.3.2'
+version = '0.3.3.dev0'
 # sshpass路径
 sshpass = 'sshpass'
 
