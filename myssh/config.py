@@ -7,6 +7,8 @@ sshpass = 'sshpass'
 #多服务器操作下载上传资源目录
 source_path = os.path.expanduser('~')+"/myssh_files/"
 
+myssh_path = os.path.expanduser('~')+'/.myssh/'
+
 #使用编辑器打开文体,linux自动使用vim
 editors = [
   '/Applications/Sublime Text 2.app',

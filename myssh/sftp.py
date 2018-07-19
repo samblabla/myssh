@@ -7,7 +7,7 @@ from stat import S_ISDIR
 
 import data
 
-from sshtunnel import SSHTunnelForwarder
+import springboard
 
 
 def login(host,user,pwd,port):
@@ -140,25 +140,17 @@ def up_files( sftp,localPath,remotePath ):
 
 
 def create_conn(server_num):
-    proxy_name ='scp:%s' %server_num
-
     if 'springboard_info' in data.servers[server_num]:
-        if proxy_name in data.proxy_conns:
-            data.proxy_conns[proxy_name].stop()
+        port = springboard.create_proxy(
+            'scp:%s' %server_num,
+            data.servers[server_num]['springboard_info'],
+            data.servers[server_num])
 
-        springboard_info = data.servers[server_num]['springboard_info']
-        data.proxy_conns[proxy_name] = SSHTunnelForwarder(
-           (springboard_info['host'], springboard_info['port']),
-            ssh_username=springboard_info['user'],
-            ssh_password=springboard_info['password'],
-            remote_bind_address=(data.servers[server_num]['host'], data.servers[server_num]['port']),
-        )
-        data.proxy_conns[proxy_name].start()
         data.scp_conns[ server_num ] = login(
-            '127.0.0.1',
+            'localhost',
             data.servers[server_num]['user'],
             data.servers[server_num]['password'],
-            data.proxy_conns[proxy_name].local_bind_port
+            port
             )
     else:
         data.scp_conns[ server_num ] = login(

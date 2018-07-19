@@ -7,49 +7,6 @@ import common
 import time
 import threading
 
-import pexpect  
-
-def ssh_verify(name, i):
-
-    server_info = data.servers[i]
-    ssh_verify_by_server(server_info,name,i)
-
-def ssh_verify_by_server(server_info,name,i):
-    cmd = 'cd ;ls;'
-    ssh = pexpect.spawn('ssh %s@%s  -p %s  "%s"' %(
-        server_info['user'],
-        server_info['host'],
-        server_info['port'],
-        cmd))
-    msg = '\33[34m%d:\33[33m%s@%s(%s):\33[0m ' %(
-        i,
-        server_info['user'],
-        server_info['name'],
-        common.hideipFun(server_info['host'])
-        )
-    
-    try:
-        status = ssh.expect(['password:', 'continue connecting (yes/no)?'], timeout=20)
-        if status == 0 :
-            ssh.sendline(server_info['password'])
-            ssh.sendline(cmd)
-            print(msg+' \033[32mSuccess\033[0m')
-        elif status == 1:
-            ssh.sendline('yes\n')
-            ssh.expect('password: ')
-            ssh.sendline(server_info['password'])
-            ssh.sendline(cmd)
-            print(msg+' \033[32mAdd public key successfully\033[0m')
-        ssh.close()
-        return
-    except pexpect.EOF:
-        print(msg+' \033[31mEOF\033[0m')
-        ssh.close()
-    except pexpect.TIMEOUT:
-        print(msg+' \033[31mTimeout\033[0m')
-        ssh.close()
-
-
 def threads_connect(name,i):
     ssh.create_conn(i)
     sftp.create_conn(i)

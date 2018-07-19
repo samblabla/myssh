@@ -24,14 +24,27 @@ import config
 import data
 import ssh
 import sftp
+import sshlogin
+
 import common
 import threads_func
+import springboard
 
-import urlparse
+import signal
+
+#中断事件
+def sigint_handler(signum, frame):
+    stop_all_proxy()
+    exit()
+signal.signal(signal.SIGINT, sigint_handler)
+signal.signal(signal.SIGHUP, sigint_handler)
+signal.signal(signal.SIGTERM, sigint_handler)
+def stop_all_proxy():
+    for key in data.proxy_conns:
+        springboard.proxy_stop(key)
 
 symtem_name = platform.system()
 
-sshpass = config.sshpass
 source_path = config.source_path
 yaml_path = config.yaml_path
 
@@ -486,6 +499,8 @@ def main():
     
     check_config_file()
     
+    springboard.clear_proxy_cache()
+    
     if len(sys.argv) > 1:
         for operate in sys.argv[1:]:
             if operate == '-v':
@@ -581,46 +596,12 @@ def main():
                 show_str = show_str.replace( expansion_key,  '')
 
             data.servers = result
-
-            if( len(sys.argv) >2 and  sys.argv[1] == "connect" ):
-                parsed_tuple = urlparse.urlparse(sys.argv[2])
-                if(parsed_tuple.scheme=='ssh'):
-                    server_info = {}
-
-                    temp = parsed_tuple.netloc.split('@')
-
-                    temp2 = temp[0].split(':')
-                    server_info["user"]= temp2[0]
-                    server_info["password"]= temp2[1]
-                    server_info["path"]=parsed_tuple.path
-                    server_info["name"]="connect"
-
-                    temp3 = temp[1].split(':')
-                    server_info["host"]= temp3[0]
-                                        
-                    if(len(temp3)>1):
-                        server_info["port"]= temp3[1]
-                    else:
-                        server_info["port"]= 22
-                    if parsed_tuple.path:
-                        server_info["defaultPath"]= parsed_tuple.path
-                    
-                    known_host = os.popen("ssh-keygen -F %s" %server_info['host'])
-                    if(known_host.read() == ''):
-                        if( server_info['port'] != 22):
-                            known_host = os.popen("ssh-keygen -F [%s]:%s" %(server_info['host'],str(server_info['port'])) )
-                            if (known_host.read() == ''):
-                                threads_func.ssh_verify_by_server(server_info,'验证',-1)
-                        else:
-                            threads_func.ssh_verify_by_server(server_info,'验证',-1)
-                    
-                    login_ssh(server_info)
-                exit()
+       
             if( len(sys.argv) >1 and  sys.argv[1] == "verify" ):
                 n = 0
                 verify_threads = []
                 for server_info in data.servers:
-                    verify_threads.append( threading.Thread(target=threads_func.ssh_verify,args=('验证',n)) )
+                    verify_threads.append( threading.Thread(target=sshlogin.proxy_ssh_verify,args=('验证',n)) )
                     n += 1
                 threads_func.threads_handle(verify_threads)
                 
@@ -664,6 +645,7 @@ def main():
                 if(server =='help'):
                     continue
                 elif(server == 'quit' or server == 'exit' ):
+                    stop_all_proxy()
                     exit()
                 elif(server.find('cmd ') != -1):
                     server_list = []
@@ -772,10 +754,9 @@ def main():
 
                                 data.ssh_conns[ server_num ].close()
                                 data.scp_conns[ server_num ].close()
-                                if 'ssh:%s' %server_num in data.proxy_conns:
-                                    data.proxy_conns['ssh:%s' %server_num].stop()
-                                if 'scp:%s' %server_num in data.proxy_conns:
-                                    data.proxy_conns['scp:%s' %server_num].stop()
+                                springboard.proxy_stop('ssh:%s')
+                                springboard.proxy_stop('scp:%s')
+
                             break
                         if(p_cmd == 'f5'):
                             reconnect_threads = []
@@ -983,62 +964,13 @@ def main():
                     
                     if( 'description' in server_info ):
                         print( '\33[32m' + server_info['description'].replace('#',' \33[35m#').replace('\\n ','\33[32m\n') +'\33[0m\n' )
-    
-                    known_host = os.popen("ssh-keygen -F %s" %server_info['host'])
-                    if(known_host.read() == ''):
-                        if('springboard' in server_info):
-                            springboard_info = server_info['springboard_info']
-                            if( server_info['port'] != '22'):
-                                known_host = os.popen("ssh-keygen -F [%s]:%s" %(springboard_info['host'],str(springboard_info['port'])) )
-                                if (known_host.read() == ''):
-                                    threads_func.ssh_verify('验证',springboard_info['id'])
-                            else:
-                                threads_func.ssh_verify('验证',springboard_info.id)
-                        else:
-                            if( server_info['port'] != '22'):
-                                known_host = os.popen("ssh-keygen -F [%s]:%s" %(server_info['host'],str(server_info['port'])) )
-                                if (known_host.read() == ''):
-                                    threads_func.ssh_verify('验证',server_num)
-                            else:
-                                threads_func.ssh_verify('验证',server_num)
-                    login_ssh(server_info)
+
+                    sshlogin.login(server_num,server_info)
+
    
 
 
-def login_ssh(server_info):
 
-    if ("springboard_info" in server_info):
-    
-        springboard_info = server_info['springboard_info']
-    
-        login_command = "%s -p '%s' ssh %s@%s -p %s -o ServerAliveInterval=60 -t " %( sshpass, springboard_info['password'], springboard_info['user'], springboard_info['host'] ,springboard_info['port'] )
-    
-        if( 'defaultPath' in server_info ):
-            login_command = login_command + "\"myssh connect ssh://"+server_info['user']+":"+server_info['password']+"@"+server_info['host']+":"+str(server_info['port']) +server_info['defaultPath']+"\""
-        else:
-            login_command = login_command + "\"myssh connect ssh://"+server_info['user']+":"+server_info['password']+"@"+server_info['host']+":"+str(server_info['port'])+"\""
-
-        os.system(login_command)
-    else:
-        login_command = "%s -p '%s' ssh %s@%s -p %s -o ServerAliveInterval=60 -t " %( sshpass, server_info['password'], server_info['user'], server_info['host'] ,server_info['port'] )
-
-        if( 'defaultPath' in server_info ):
-            login_command = login_command+"'cd %s;bash;'" %(server_info['defaultPath'])
-        else:
-            login_command = login_command+"'bash;'"
-        os.system(
-            '''%s -p '%s' ssh %s@%s -p %s -t '\
-            echo "\033[33m ";\
-            date -R;echo '';\
-            echo 内网IP:$(ifconfig |head -n 2|grep "inet addr"|cut -b 21-80);\
-            echo 系统:$(head -n 1 /etc/issue) $(getconf LONG_BIT)位;\
-            echo cpu:$(cat /proc/cpuinfo |grep "model name"| wc -l)核;\
-            cat /proc/meminfo |grep 'MemTotal';echo 磁盘使用:;\
-            df -hl;\
-            echo "\033[0m";\
-            ' ''' %( sshpass, server_info['password'], server_info['user'], server_info['host'] ,server_info['port']),
-        )
-        os.system(login_command)
         
 if __name__ == '__main__':
     main()

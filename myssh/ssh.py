@@ -3,7 +3,7 @@ import paramiko
 
 import data
 import common
-from sshtunnel import SSHTunnelForwarder
+import springboard
 
 
 
@@ -49,26 +49,17 @@ def cd(server_num,cmd_str):
 
 
 def create_conn(server_num):
-    proxy_name ='ssh:%s' %server_num
-
     if 'springboard_info' in data.servers[server_num]:
-        if proxy_name in data.proxy_conns:
-            data.proxy_conns[proxy_name].stop()
-        springboard_info = data.servers[server_num]['springboard_info']
-        data.proxy_conns[proxy_name] = SSHTunnelForwarder(
-           (springboard_info['host'], springboard_info['port']),
-            ssh_username=springboard_info['user'],
-            ssh_password=springboard_info['password'],
-            remote_bind_address=(data.servers[server_num]['host'], data.servers[server_num]['port']),
-        )
-        
-        data.proxy_conns[proxy_name].start()
+        port = springboard.create_proxy(
+            'ssh:%s' %server_num,
+            data.servers[server_num]['springboard_info'],
+            data.servers[server_num])
 
         data.ssh_conns[ server_num ] = login(
-            '127.0.0.1',
+            'localhost',
             data.servers[server_num]['user'],
             data.servers[server_num]['password'],
-            data.proxy_conns[proxy_name].local_bind_port
+            port
             )
     else:
 
