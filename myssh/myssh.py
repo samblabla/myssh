@@ -647,6 +647,15 @@ def main():
                 elif(server == 'quit' or server == 'exit' ):
                     stop_all_proxy()
                     exit()
+                elif(server.find('proxy ') != -1 ):
+                    server_list = []
+                    server_nums =  server.split(' ')
+                    server_nums = list_del_empty( server_nums )
+                    if len( server_nums )> 1:
+                        server_info = data.servers[ int(server_nums[1]) ]
+                        print("代理服务 %s(%s)\n访问地址 socks5://localhost:1888" %(server_info['name'], server_info['host']))
+                        os.system("sshpass -p '%s' ssh -o ServerAliveInterval=60 -ND localhost:1888 %s@%s -p %s" %(server_info['password'],server_info['user'],server_info['host'],server_info['port']))
+                    continue
                 elif(server.find('cmd ') != -1):
                     server_list = []
 
@@ -792,6 +801,7 @@ def main():
                             continue
 
                         if( p_cmd == 'quit'):
+                            stop_all_proxy()
                             exit()
                         n = 0
                         if( p_cmd[0:3] =='rm '):
