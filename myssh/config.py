@@ -35,8 +35,6 @@ yaml_demo_content = '''- name: 本地
       password: 123456
       name: 联想ubuntu
       port: 11773
-
-
 -
   name: app
   group:
@@ -52,31 +50,29 @@ yaml_demo_content = '''- name: 本地
     password: 123456
     name: APP推送服务器-2
     defaultPath: /var/local/
-
-
 - name: v9直播室
   code: web
   group:
   -
-    host: 192.168.0.100
+    host: 192.168.0.1
+    user: root
+    password: 123456
+    name: 代理机
+    defaultPath: /var/local/
+  -
+    host: 192.168.0.2
     user: root
     password: 123456
     name: web-1
     defaultPath: /var/local/
+    springboard: 47.98.236.14
   -
-    host: 192.168.0.100
+    host: 192.168.0.3
     user: root
     password: 123456
     name: web-2
     defaultPath: /var/local/
-  -
-    host: 192.168.0.100
-    user: root
-    password: 123456
-    name: a.com
-    defaultPath: /var/local/
-
-
+    springboard: 192.168.0.1
 - 
   host: 10.211.55.6
   user: root

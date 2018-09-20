@@ -1,10 +1,14 @@
 # myssh
 Mac OS和Linux上的命令行ssh管理工具
 
+- ssh登录服务器
+
+![](./doc/images/img1.gif)
+
 - 操作多台服务器执行非交互性的指令
 - 同步多台服务器文件
 
-![](./doc/images/myssh.gif)
+![](./doc/images/img2.gif)
 
 
 ### 安装
@@ -38,3 +42,4 @@ myssh edit
 
 ### License
 Apache License Version 2.0 see http://www.apache.org/licenses/LICENSE-2.0.html
+
