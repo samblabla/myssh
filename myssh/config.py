@@ -65,7 +65,7 @@ yaml_demo_content = '''- name: 本地
     password: 123456
     name: web-1
     defaultPath: /var/local/
-    springboard: 47.98.236.14
+    springboard: 192.168.0.1
   -
     host: 192.168.0.3
     user: root
