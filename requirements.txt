@@ -1,5 +1,5 @@
 pycrypto==2.6.1
 PyYAML==3.12
-paramiko==2.4.1
+paramiko==2.4.2
 pexpect==4.3.0
 sshtunnel==0.1.4
