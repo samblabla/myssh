@@ -5,16 +5,28 @@ import data
 import common
 import springboard
 
+import socks
 
-
-def login(host,user,pwd,port):
+def login(host,user,pwd,port,server_info):
     #建立ssh连接
     ssh=paramiko.SSHClient()
     ssh.load_system_host_keys()
     ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
     
-    ssh.connect(host,port=port,username=user,password=pwd,compress=True)
-    
+
+    if( 'socks5proxy' in server_info ):
+        socks5proxy = server_info['socks5proxy'].split(":")
+        sock=socks.socksocket()
+        sock.set_proxy(
+            proxy_type=socks.SOCKS5,
+            addr=socks5proxy[0],
+            port=int(socks5proxy[1])
+        )
+        sock.connect((host, port))
+        ssh.connect(host,port=port,username=user,password=pwd,compress=True, sock=sock)
+    else:
+        ssh.connect(host,port=port,username=user,password=pwd,compress=True)
+
     return ssh
 
 def cmd(server_num,cmd_str):
@@ -59,7 +71,8 @@ def create_conn(server_num):
             'localhost',
             data.servers[server_num]['user'],
             data.servers[server_num]['password'],
-            port
+            port,
+            {}
             )
     else:
 
@@ -67,7 +80,8 @@ def create_conn(server_num):
             data.servers[server_num]['host'],
             data.servers[server_num]['user'],
             data.servers[server_num]['password'],
-            data.servers[server_num]['port']
+            data.servers[server_num]['port'],
+            data.servers[server_num]
             )
 
 

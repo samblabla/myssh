@@ -9,9 +9,21 @@ import data
 
 import springboard
 
+import socks
 
-def login(host,user,pwd,port):
-    scp=paramiko.Transport((host,port))
+def login(host,user,pwd,port,server_info):
+    if( 'socks5proxy' in server_info ):
+        socks5proxy = server_info['socks5proxy'].split(":")
+        sock=socks.socksocket()
+        sock.set_proxy(
+            proxy_type=socks.SOCKS5,
+            addr=socks5proxy[0],
+            port=int(socks5proxy[1])
+        )
+        sock.connect((host, port))
+        scp=paramiko.Transport(sock)
+    else:
+        scp=paramiko.Transport((host,port))
     #建立连接
     scp.connect(username=user,password=pwd)
     sftp=paramiko.SFTPClient.from_transport(scp)
@@ -150,14 +162,16 @@ def create_conn(server_num):
             'localhost',
             data.servers[server_num]['user'],
             data.servers[server_num]['password'],
-            port
+            port,
+            {}
             )
     else:
         data.scp_conns[ server_num ] = login(
             data.servers[server_num]['host'],
             data.servers[server_num]['user'],
             data.servers[server_num]['password'],
-            data.servers[server_num]['port']
+            data.servers[server_num]['port'],
+            data.servers[server_num]
             )
 
 

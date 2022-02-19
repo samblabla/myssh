@@ -1,6 +1,7 @@
 #coding:utf-8
 
 import os
+from socket import socket
 from sshtunnel import SSHTunnelForwarder
 import data
 import config
@@ -35,13 +36,17 @@ def login(server_num,server_info):
     login_cmd(server_info)
 
 def login_cmd(server_info):
-    login_command = "%s -p '%s' ssh %s@%s -p %s -o ServerAliveInterval=60 -t " %( sshpass, server_info['password'], server_info['user'], server_info['host'] ,server_info['port'] )
+    socket5proxy = ''
+    if( 'socks5proxy' in server_info ):
+        socket5proxy = ' -o "ProxyCommand=nc -X 5 -x '+server_info['socks5proxy']+' %h %p"'
+    login_command = "%s -p '%s' ssh %s %s@%s -p %s -o ServerAliveInterval=60 -t " %( sshpass, server_info['password'],socket5proxy, server_info['user'], server_info['host'] ,server_info['port'] )
+
     if( 'defaultPath' in server_info ):
         login_command = login_command+"'cd %s;bash;'" %(server_info['defaultPath'])
     else:
         login_command = login_command+"'bash;'"
     os.system(
-        '''%s -p '%s' ssh %s@%s -p %s -t '\
+        '''%s -p '%s' ssh %s %s@%s -p %s -t '\
         echo "\033[33m ";\
         date -R;echo '';\
         echo 内网IP:$(ifconfig |head -n 2|grep "inet addr"|cut -b 21-80);\
@@ -50,7 +55,7 @@ def login_cmd(server_info):
         cat /proc/meminfo |grep 'MemTotal';echo 磁盘使用:;\
         df -hl;\
         echo "\033[0m";\
-        ' ''' %( sshpass, server_info['password'], server_info['user'], server_info['host'] ,server_info['port']),
+        ' ''' %( sshpass, server_info['password'],socket5proxy, server_info['user'], server_info['host'] ,server_info['port']),
     )
     os.system(login_command)
 
