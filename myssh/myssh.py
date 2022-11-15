@@ -534,7 +534,7 @@ def main():
         result = list()
         relation ={}
         
-        temp_result = yaml.load( f )
+        temp_result = yaml.safe_load( f )
         group_code_list ={}
         f.close()
         if( temp_result == None ):
