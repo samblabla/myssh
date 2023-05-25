@@ -42,9 +42,12 @@ def login_cmd(server_info):
     login_command = "%s -p '%s' ssh %s %s@%s -p %s -o ServerAliveInterval=60 -t " %( sshpass, server_info['password'],socket5proxy, server_info['user'], server_info['host'] ,server_info['port'] )
 
     if( 'defaultPath' in server_info ):
-        login_command = login_command+"'cd %s;bash;'" %(server_info['defaultPath'])
+        # login_command = login_command+"'cd %s;bash;'" %(server_info['defaultPath'])
+        login_command = login_command+"'cd %s; [ -z $( which bash ) ] && sh || bash;'" %(server_info['defaultPath'])
     else:
-        login_command = login_command+"'bash;'"
+        # login_command = login_command+"'bash;'"
+        login_command = login_command+"'[ -z $( which bash ) ] && sh || bash;'"
+
     os.system(
         '''%s -p '%s' ssh %s %s@%s -p %s -t '\
         echo "\033[33m ";\
