@@ -267,7 +267,10 @@ def ssh_cmd_func(server_num,result,p_cmd,ssh_conns,source_path,n):
             cmds[1] = cmds[1][0:len(cmds[1])-1]
         fileName = cmds[1].split('/')
 
-        check_up(server_num, data.scp_conns[ server_num ],source_path+'up/'+cmds[1],data.paths[server_num]+'/', fileName[ len(fileName)-1] ,data.paths[server_num],n)
+        if os.path.exists(source_path+'up/'+cmds[1]): #up目录下存在需要上传的文件
+            check_up(server_num, data.scp_conns[ server_num ],source_path+'up/'+cmds[1],data.paths[server_num]+'/', fileName[ len(fileName)-1] ,data.paths[server_num],n)
+        else:
+            check_up(server_num, data.scp_conns[ server_num ],cmds[1],data.paths[server_num]+'/', fileName[ len(fileName)-1] ,data.paths[server_num],n)
     # elif(p_cmd[0:5] =='downs'):
     #     cmds = cmd.split(' ')
     #     fileName = cmds[1].split('/')
@@ -622,7 +625,7 @@ def main():
     \33[33mcmd -g\33[0m 服务器编号  操作分组中的多台服务器,需要配置分组code
         
         cmd连接上服务器之后可以执行下面的命令
-        \33[33mup\33[0m      上传文件 如 up 本地文件名 (上传"~/myssh_files/up/"目录下的文件)
+        \33[33mup\33[0m      上传文件 如 up 本地文件名 (上传"~/myssh_files/up/"目录下的文件或自己输入全路径地址如/root/xxx/xxx.txt)
         \33[33mdown\33[0m    下载文件 如 down 服务器文件名 本地文件名(可选)
         \33[33msync\33[0m    同步文件 "sync 服务器id > 被同步的服务器id(多个使用空格分隔)",如 sync 1 > 2 3
         \33[33mcopy\33[0m    复制文件 "copy 服务器id 文件名> 被同步的服务器id(多个使用空格分隔)",如 copy 1 1.txt > 2 3
