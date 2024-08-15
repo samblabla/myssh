@@ -156,10 +156,19 @@ def check_down( server_num,remotePath,localPath,fileName ,cmdPath):#检查下载
     try:
         cmd = 'find ' + remotePath + ' -type f | wc -l'
         file_num = int( ssh.cmd(server_num,cmd) )
-        if( file_num >15 ):
-  
+
+        cmd1 =  "du -s " +remotePath + " | awk '{print $1}'"
+        file_size = int( ssh.cmd(server_num,cmd1) )
+
+        
+        if( file_num >10 or file_size > 50000):
             
-            input_result = raw_input( '下载文件数量为:%d,建议压缩后再下载(输入y继续下载,输入t打包下载,输入n退出):' %file_num )
+            if( file_size > 50000 ):
+                cmd3 =  "du -sh " +remotePath + " | awk '{print $1}'"
+                file_size = str( ssh.cmd(server_num,cmd3) )
+                input_result = raw_input( '下载文件大小为:%s,建议压缩后再下载(输入y继续下载,输入t打包下载,输入n退出):' %file_size )
+            else:
+                input_result = raw_input( '下载文件数量为:%d,建议压缩后再下载(输入y继续下载,输入t打包下载,输入n退出):' %file_num )
             if(input_result == 'y'):
                 sftp.downs(server_num,remotePath,localPath)
             elif(input_result == 't'):
