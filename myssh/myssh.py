@@ -14,7 +14,7 @@ import platform
 import threading
 
 for path in sys.path:
-    if re.search('\/myssh.+?.egg', path) :
+    if re.search('\\/myssh.+?.egg', path) :
         sys.path.append(path+'/myssh')
         break
 
@@ -528,7 +528,7 @@ def main():
         if symtem_name == 'Darwin':
             for editor in config.editors:
                 if( os.path.exists(editor) ):
-                    editor = editor.replace(' ','\ ')
+                    editor = editor.replace(' ','\\ ')
                     os.system('open -a '+editor+' '+yaml_path)
                     return
             os.system('vim '+yaml_path)

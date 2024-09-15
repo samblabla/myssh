@@ -1,5 +1,8 @@
 #coding:utf-8
-import paramiko
+import warnings
+from cryptography.utils import CryptographyDeprecationWarning
+with warnings.catch_warnings(action="ignore", category=CryptographyDeprecationWarning):
+    import paramiko
 import math
 import sys
 import os
