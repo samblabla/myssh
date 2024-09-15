@@ -17,6 +17,8 @@ if 'libedit' in readline.__doc__:
     readline.parse_and_bind("bind '\t' rl_complete")
 else:
     readline.parse_and_bind("tab: complete")
+    
+readline.set_completer_delims(' \t\n;')
 
 ### Add history
 import os
