@@ -591,6 +591,9 @@ def main():
                 ciphertext = base64.b64decode(ciphertext.encode('utf-8'))
                 res = aes.decrypt(ciphertext,key)
                 res = str(res,encoding='utf-8')
+                if(  len(sys.argv) >2 and (sys.argv[2] == 's' or  sys.argv[2] == 'show') ):
+                    print(res)
+                    return
                 temp_result = yaml.safe_load(res)
             except:
                 print('发生错误')
@@ -689,6 +692,7 @@ def main():
         \33[33msync\33[0m    同步文件 "sync 服务器id > 被同步的服务器id(多个使用空格分隔)",如 sync 1 > 2 3
         \33[33mcopy\33[0m    复制文件 "copy 服务器id 文件名> 被同步的服务器id(多个使用空格分隔)",如 copy 1 1.txt > 2 3
         \33[33mdetail\33[0m  查询服务器运行情况
+        \33[33mf5\33[0m      重新连接服务器
         \33[33mscript\33[0m  执行脚本,脚本文件放置到"~/myssh_files/scirpt/"下,使用 script 文件名 执行,如 script 1.sh (注:使用up,down,sync,copy这些命令必需单独一行)
         多台操作时,使用 "服务器id:操作指令" 可操作单台服务器,如 1:ls
 

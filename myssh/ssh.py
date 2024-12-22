@@ -1,9 +1,9 @@
 #coding:utf-8
 import warnings
 from cryptography.utils import CryptographyDeprecationWarning
-with warnings.catch_warnings(action="ignore", category=CryptographyDeprecationWarning):
+with warnings.catch_warnings():
+    warnings.filterwarnings("ignore", category=CryptographyDeprecationWarning)
     import paramiko
-
 import data
 import common
 import springboard
