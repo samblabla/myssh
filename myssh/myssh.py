@@ -32,6 +32,11 @@ import springboard
 
 import signal
 
+import aes
+import requests
+import base64
+import getpass
+
 #中断事件
 def sigint_handler(signum, frame):
     stop_all_proxy()
@@ -47,6 +52,8 @@ symtem_name = platform.system()
 
 source_path = config.source_path
 yaml_path = config.yaml_path
+config_path = config.config_path
+myssh_config = {}
 
 regex = re.compile(r'([\s\S]+?)-\d+$')#正则匹配 名字 关联批量操作
 regex_cmd = re.compile(r'^(\d+):([\w\W]+)')#多台服务器操作时 判断是否只操作一台
@@ -313,7 +320,7 @@ def ssh_cmd_func(server_num,result,p_cmd,ssh_conns,source_path,n):
         print( cmds[ n ] )
 
 
-def check_config_file():
+def check_myssh_file():
     if os.path.isdir( os.path.expanduser('~')+'/.myssh' ):
         pass
     else:
@@ -325,6 +332,20 @@ def check_config_file():
         f.write(config.yaml_demo_content)
         f.close()
 
+def read_config_file():
+
+    if os.path.exists(config_path):
+        pass
+    else:
+        f=open(config_path,'w')  
+        f.write(config.config_demo_content)
+        f.close()
+
+    f = open( config_path,'r')
+    myssh_config = yaml.safe_load( f )
+    f.close()
+    return myssh_config
+    
 def cmd_copy(p_cmd):
     global server_list
     copy_info = p_cmd.split( '>' )
@@ -509,7 +530,8 @@ def main():
     global cmds
     global server_list
     
-    check_config_file()
+    check_myssh_file()
+    myssh_config = read_config_file()
     
     springboard.clear_proxy_cache()
     
@@ -535,20 +557,48 @@ def main():
         else:
             os.system('vim '+yaml_path)
         return
+    elif( len(sys.argv) >1 and sys.argv[1] == 'aes'):
+        f = open( yaml_path,'r')
+        key = raw_input('password: ')
+        key = aes.handleKey(key)
+        plaintext = bytes(f.read(), encoding="utf-8")
+        res = aes.encrypt(plaintext,key)
+        res = base64.b64encode(res).decode('utf-8')
+        print(res)
+        # print(res.decode('utf-8'))
+
+        # print(str(aes.decrypt(res,key),encoding="utf-8"))
+        return
     # elif( len(sys.argv) >1 and sys.argv[1] == 'self'):
     #     if symtem_name == 'Darwin':
     #         os.system('open -a '+editor+' '+sys.path[0]+'/'+ ( sys.argv[0].split("/")[-1]) )
     #     else:
     #         os.system('vim '+sys.path[0]+'/'+ ( sys.argv[0].split("/")[-1]) )
     else:
-        # f = open( sys.path[0]+'/'+yaml_path,'r')
-        f = open( yaml_path,'r')
         result = list()
         relation ={}
-        
-        temp_result = yaml.safe_load( f )
+            
         group_code_list ={}
-        f.close()
+        if( len(sys.argv) >1 and (sys.argv[1] == 'r' or sys.argv[1] == 'remote') ):
+            file = raw_input('file: ')
+            key = getpass.getpass('password: ')
+            key = aes.handleKey(key)
+
+            try:
+                response = requests.get(myssh_config['remote']+file)
+                
+                ciphertext = response.text
+                ciphertext = base64.b64decode(ciphertext.encode('utf-8'))
+                res = aes.decrypt(ciphertext,key)
+                res = str(res,encoding='utf-8')
+                temp_result = yaml.safe_load(res)
+            except:
+                print('发生错误')
+                return
+        else:
+            f = open( yaml_path,'r')
+            temp_result = yaml.safe_load( f )
+            f.close()
         if( temp_result == None ):
             show_str = '= =! 还没有服务器\nmyssh add      使用命令添加服务器信息'
         else:

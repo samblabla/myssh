@@ -1,4 +1,6 @@
-pycrypto==2.6.1
+# pycrypto==2.6.1
+pycryptodome==3.17.0
+requests==2.25.1
 PyYAML==6.0
 paramiko==3.0.0
 pexpect==4.3.0

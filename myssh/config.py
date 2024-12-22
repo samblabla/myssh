@@ -18,6 +18,9 @@ editors = [
 #yaml配置文体地址,只支持当对路径
 yaml_path = os.path.expanduser('~')+'/.myssh/myssh.yml'
 
+config_path = os.path.expanduser('~')+'/.myssh/config.yml'
+config_demo_content ='''remote: http://www.test.com/test/'''
+
 yaml_demo_content = '''- name: 本地
   group:
     - 
